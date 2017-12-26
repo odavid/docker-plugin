@@ -90,39 +90,17 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         return workdir + '/' + remoting.getName();
     }
 
-    public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String remoteFs, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        final DockerClient client = api.getClient();
-        beforeContainerCreated(api, remoteFs, cmd);
-        String containerId = cmd.exec().getId();
-
-        try {
-            beforeContainerStarted(api, remoteFs, containerId);
-
-            client.startContainerCmd(containerId).exec();
-
-            afterContainerStarted(api, remoteFs, containerId);
-        } catch (DockerException e) {
-            // if something went wrong, cleanup aborted container
-            client.removeContainerCmd(containerId).withForce(true).exec();
-            throw e;
-        }
-
-        return createLauncher(api, containerId, remoteFs, listener);
-
-    }
-
-    private final DockerContainerComputerLauncher createLauncher(final DockerAPI api, @Nonnull final String containerId, String workdir, TaskListener listener) throws IOException, InterruptedException {
-
-        final InspectContainerResponse inspect = api.getClient().inspectContainerCmd(containerId).exec();
-        final Boolean running = inspect.getState().getRunning();
-        if (Boolean.FALSE.equals(running)) {
-            listener.error("Container {} is not running. {}", containerId, inspect.getState().getStatus());
-            throw new IOException("Container is not running.");
-        }
-
+    public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+        DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter(api, listener, workdir, cmd);
+        final InspectContainerResponse inspect = dockerContainerExecuter.executeContainer(this);
         final ComputerLauncher launcher = createLauncher(api, workdir, inspect, listener);
-        return new DockerContainerComputerLauncher(launcher, containerId, api);
+        return new DockerContainerComputerLauncher(launcher, inspect.getId(), api);
     }
+
+    protected DockerContainerExecuter getDockerContainerExecuter(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd){
+        return new DefaultDockerContainerExecuter(api, listener, workdir, cmd);
+    }
+
 
     /**
      * Create a Launcher to create an Agent with this container. Can assume container has been created by this
