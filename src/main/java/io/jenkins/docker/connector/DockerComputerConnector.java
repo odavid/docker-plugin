@@ -3,6 +3,7 @@ package io.jenkins.docker.connector;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.exception.DockerException;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.nirima.jenkins.plugins.docker.DockerSlave;
 import com.nirima.jenkins.plugins.docker.DockerTemplate;
@@ -89,7 +90,28 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         return workdir + '/' + remoting.getName();
     }
 
-    public final ComputerLauncher createLauncher(final DockerAPI api, @Nonnull final String containerId, String workdir, TaskListener listener) throws IOException, InterruptedException {
+    public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String remoteFs, CreateContainerCmd cmd) throws IOException, InterruptedException {
+        final DockerClient client = api.getClient();
+        beforeContainerCreated(api, remoteFs, cmd);
+        String containerId = cmd.exec().getId();
+
+        try {
+            beforeContainerStarted(api, remoteFs, containerId);
+
+            client.startContainerCmd(containerId).exec();
+
+            afterContainerStarted(api, remoteFs, containerId);
+        } catch (DockerException e) {
+            // if something went wrong, cleanup aborted container
+            client.removeContainerCmd(containerId).withForce(true).exec();
+            throw e;
+        }
+
+        return createLauncher(api, containerId, remoteFs, listener);
+
+    }
+
+    private final DockerContainerComputerLauncher createLauncher(final DockerAPI api, @Nonnull final String containerId, String workdir, TaskListener listener) throws IOException, InterruptedException {
 
         final InspectContainerResponse inspect = api.getClient().inspectContainerCmd(containerId).exec();
         final Boolean running = inspect.getState().getRunning();
@@ -99,23 +121,7 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         }
 
         final ComputerLauncher launcher = createLauncher(api, workdir, inspect, listener);
-        return new DelegatingComputerLauncher(launcher) {
-
-            @Override
-            public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-                try {
-                    api.getClient().inspectContainerCmd(containerId).exec();
-                } catch (NotFoundException e) {
-                    // Container has been removed
-                    Queue.withLock( () -> {
-                        DockerTransientNode node = (DockerTransientNode) computer.getNode();
-                        node.terminate(listener);
-                    });
-                    return;
-                }
-                super.launch(computer, listener);
-            }
-        };
+        return new DockerContainerComputerLauncher(launcher, containerId, api);
     }
 
     /**
@@ -123,5 +129,36 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
      * DockerAgentConnector so adequate setup did take place.
      */
     protected abstract ComputerLauncher createLauncher(DockerAPI api, String workdir, InspectContainerResponse inspect, TaskListener listener) throws IOException, InterruptedException;
+
+
+    public static final class DockerContainerComputerLauncher extends DelegatingComputerLauncher{
+        private final String containerId;
+        private final DockerAPI api;
+
+        DockerContainerComputerLauncher(ComputerLauncher launcher, String containerId, DockerAPI api){
+            super(launcher);
+            this.containerId = containerId;
+            this.api = api;
+        }
+
+        public String getContainerId(){
+            return containerId;
+        }
+
+        @Override
+        public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+            try {
+                api.getClient().inspectContainerCmd(containerId).exec();
+            } catch (NotFoundException e) {
+                // Container has been removed
+                Queue.withLock( () -> {
+                    DockerTransientNode node = (DockerTransientNode) computer.getNode();
+                    node.terminate(listener);
+                });
+                return;
+            }
+            super.launch(computer, listener);
+        }
+    }
 
 }
