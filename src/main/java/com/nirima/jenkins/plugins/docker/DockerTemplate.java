@@ -28,6 +28,7 @@ import hudson.util.DescribableList;
 import io.jenkins.docker.DockerTransientNode;
 import io.jenkins.docker.client.DockerAPI;
 import io.jenkins.docker.connector.DockerComputerConnector;
+import io.jenkins.docker.connector.DockerContainerComputerLauncher;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
 import org.kohsuke.accmod.Restricted;
@@ -419,15 +420,15 @@ public class DockerTemplate implements Describable<DockerTemplate> {
         CreateContainerCmd cmd = client.createContainerCmd(getImage());
         fillContainerConfig(cmd);
 
-        final DockerComputerConnector.DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, cmd);
-        DockerTransientNode node = new DockerTransientNode(launcher.getContainerId(), remoteFs, launcher);
+        final DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, cmd);
+        String uniq = Long.toHexString(System.nanoTime());
+        DockerTransientNode node = new DockerTransientNode(uniq, launcher);
         node.setNodeDescription("Docker Agent [" + getImage() + " on "+ api.getDockerHost().getUri() + "]");
         node.setMode(mode);
         node.setLabelString(labelString);
         node.setRetentionStrategy(retentionStrategy);
         node.setNodeProperties(nodeProperties);
         node.setRemoveVolumes(removeVolumes);
-        node.setDockerAPI(api);
         return node;
     }
 

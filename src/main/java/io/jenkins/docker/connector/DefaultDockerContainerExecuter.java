@@ -14,8 +14,13 @@ public class DefaultDockerContainerExecuter implements DockerContainerExecuter{
     private final TaskListener listener;
     private final String workdir;
     private final CreateContainerCmd cmd;
+    private final DockerComputerConnector connector;
+    // This value is initialized when container is being started
+    private String containerId;
 
-    public DefaultDockerContainerExecuter(DockerAPI dockerAPI, TaskListener listener, String workdir, CreateContainerCmd cmd){
+    public DefaultDockerContainerExecuter(DockerComputerConnector connector,
+                                          DockerAPI dockerAPI, TaskListener listener, String workdir, CreateContainerCmd cmd){
+        this.connector = connector;
         this.dockerAPI = dockerAPI;
         this.listener = listener;
         this.workdir = workdir;
@@ -43,10 +48,18 @@ public class DefaultDockerContainerExecuter implements DockerContainerExecuter{
     }
 
     @Override
-    public InspectContainerResponse executeContainer(DockerComputerConnector connector) throws IOException, InterruptedException{
+    public String getContainerId() throws IllegalStateException{
+        if(containerId == null){
+            throw new IllegalStateException("Container was started yet");
+        }
+        return containerId;
+    }
+
+    @Override
+    public InspectContainerResponse executeContainer() throws IOException, InterruptedException{
         final DockerClient client = dockerAPI.getClient();
         connector.beforeContainerCreated(dockerAPI, workdir, cmd);
-        String containerId = cmd.exec().getId();
+        containerId = cmd.exec().getId();
         try {
             connector.beforeContainerStarted(dockerAPI, workdir, containerId);
             client.startContainerCmd(containerId).exec();

@@ -2,26 +2,17 @@ package io.jenkins.docker.connector;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
-import com.github.dockerjava.api.command.InspectContainerResponse;
-import com.github.dockerjava.api.exception.DockerException;
-import com.github.dockerjava.api.exception.NotFoundException;
 import com.nirima.jenkins.plugins.docker.DockerSlave;
-import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import com.thoughtworks.xstream.InitializationException;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.Queue;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
 import hudson.remoting.Which;
 import hudson.slaves.ComputerLauncher;
-import hudson.slaves.DelegatingComputerLauncher;
-import hudson.slaves.SlaveComputer;
-import io.jenkins.docker.DockerTransientNode;
 import io.jenkins.docker.client.DockerAPI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 
@@ -92,13 +83,12 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
 
     public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
         DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter(api, listener, workdir, cmd);
-        final InspectContainerResponse inspect = dockerContainerExecuter.executeContainer(this);
-        final ComputerLauncher launcher = createLauncher(api, workdir, inspect, listener);
-        return new DockerContainerComputerLauncher(launcher, inspect.getId(), api);
+        final ComputerLauncher launcher = createLauncher(dockerContainerExecuter);
+        return new DockerContainerComputerLauncher(launcher, dockerContainerExecuter);
     }
 
     protected DockerContainerExecuter getDockerContainerExecuter(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd){
-        return new DefaultDockerContainerExecuter(api, listener, workdir, cmd);
+        return new DefaultDockerContainerExecuter(this, api, listener, workdir, cmd);
     }
 
 
@@ -106,37 +96,7 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
      * Create a Launcher to create an Agent with this container. Can assume container has been created by this
      * DockerAgentConnector so adequate setup did take place.
      */
-    protected abstract ComputerLauncher createLauncher(DockerAPI api, String workdir, InspectContainerResponse inspect, TaskListener listener) throws IOException, InterruptedException;
+    protected abstract ComputerLauncher createLauncher(DockerContainerExecuter containerExecuter) throws IOException, InterruptedException;
 
-
-    public static final class DockerContainerComputerLauncher extends DelegatingComputerLauncher{
-        private final String containerId;
-        private final DockerAPI api;
-
-        DockerContainerComputerLauncher(ComputerLauncher launcher, String containerId, DockerAPI api){
-            super(launcher);
-            this.containerId = containerId;
-            this.api = api;
-        }
-
-        public String getContainerId(){
-            return containerId;
-        }
-
-        @Override
-        public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-            try {
-                api.getClient().inspectContainerCmd(containerId).exec();
-            } catch (NotFoundException e) {
-                // Container has been removed
-                Queue.withLock( () -> {
-                    DockerTransientNode node = (DockerTransientNode) computer.getNode();
-                    node.terminate(listener);
-                });
-                return;
-            }
-            super.launch(computer, listener);
-        }
-    }
 
 }

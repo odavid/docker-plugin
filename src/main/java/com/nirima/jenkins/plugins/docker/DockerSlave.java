@@ -29,11 +29,13 @@ public class DockerSlave extends Slave {
     }
 
     protected Object readResolve() {
-        try {
-            return new DockerTransientNode(containerId, dockerTemplate.remoteFs, getLauncher());
-        } catch (Descriptor.FormException | IOException e) {
-            throw new RuntimeException("Failed to migrate DockerSlave", e);
-        }
+        // TODO: FIX this. need to find a way to migrate to DockerTransientNode
+//        try {
+//            return new DockerTransientNode(containerId, dockerTemplate.remoteFs, getLauncher());
+//        } catch (Descriptor.FormException | IOException e) {
+//            throw new RuntimeException("Failed to migrate DockerSlave", e);
+//        }
+            throw new RuntimeException("Failed to migrate DockerSlave");
     }
 
 

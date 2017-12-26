@@ -16,5 +16,7 @@ public interface DockerContainerExecuter {
 
     CreateContainerCmd getCreateContainerCmd();
 
-    InspectContainerResponse executeContainer(DockerComputerConnector connector) throws IOException, InterruptedException;
+    String getContainerId() throws IllegalStateException;
+
+    InspectContainerResponse executeContainer() throws IOException, InterruptedException;
 }

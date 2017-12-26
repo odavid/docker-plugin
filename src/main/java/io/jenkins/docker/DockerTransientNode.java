@@ -7,18 +7,17 @@ import com.nirima.jenkins.plugins.docker.DockerOfflineCause;
 import com.nirima.jenkins.plugins.docker.strategy.DockerOnceRetentionStrategy;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
-import hudson.model.Queue;
 import hudson.model.Slave;
 import hudson.model.TaskListener;
 import hudson.slaves.Cloud;
 import hudson.slaves.ComputerLauncher;
 import io.jenkins.docker.client.DockerAPI;
+import io.jenkins.docker.connector.DockerContainerComputerLauncher;
+import io.jenkins.docker.connector.DockerContainerExecuter;
 import jenkins.model.Jenkins;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.io.Serializable;
 
 /**
  * A {@link Slave} node designed to be used only once for a build.
@@ -27,32 +26,18 @@ import java.io.Serializable;
  */
 public class DockerTransientNode extends Slave {
     
-    private final String containerId;
-    
-    private DockerAPI dockerAPI;
-
     private boolean removeVolumes;
 
     private String cloudId;
 
-    public DockerTransientNode(@Nonnull String containerId, String remoteFS, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
-        super("docker-" + containerId.substring(0,12), remoteFS, launcher);
+    private final DockerContainerExecuter dockerContainerExecuter;
+
+    public DockerTransientNode(@Nonnull String slaveUniqueName, DockerContainerComputerLauncher launcher) throws Descriptor.FormException, IOException {
+        super("docker-" + slaveUniqueName, launcher.getDockerContainerExecuter().getWorkdir(), launcher);
+        dockerContainerExecuter = launcher.getDockerContainerExecuter();
         setNumExecutors(1);
         setMode(Mode.EXCLUSIVE);
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
-        this.containerId = containerId;
-    }
-
-    public String getContainerId() {
-        return containerId;
-    }
-
-    public void setDockerAPI(DockerAPI dockerAPI) {
-        this.dockerAPI = dockerAPI;
-    }
-
-    public DockerAPI getDockerAPI() {
-        return dockerAPI;
     }
 
     public String getDisplayName() {
@@ -78,6 +63,9 @@ public class DockerTransientNode extends Slave {
         this.cloudId = cloudId;
     }
 
+    public DockerAPI getDockerAPI(){ return dockerContainerExecuter.getDockerAPI();}
+    public String getContainerId(){ return dockerContainerExecuter.getContainerId();}
+
     @Override
     public DockerComputer createComputer() {
         return new DockerComputer(this);
@@ -92,9 +80,9 @@ public class DockerTransientNode extends Slave {
         }
 
         Computer.threadPoolForRemoting.submit(() -> {
-
+            final DockerAPI dockerAPI = getDockerAPI();
+            final String containerId = getContainerId();
             DockerClient client = dockerAPI.getClient();
-
             try {
                 client.stopContainerCmd(containerId)
                         .withTimeout(10)
@@ -103,7 +91,7 @@ public class DockerTransientNode extends Slave {
             } catch(NotFoundException e) {
                 listener.getLogger().println("Container already removed " + containerId);
             } catch (Exception ex) {
-                listener.error("Failed to stop instance " + getContainerId() + " for slave " + name + " due to exception", ex.getMessage());
+                listener.error("Failed to stop instance " + containerId + " for slave " + name + " due to exception", ex.getMessage());
                 listener.error("Causing exception for failure on stopping the instance was", ex);
             }
 
@@ -116,7 +104,7 @@ public class DockerTransientNode extends Slave {
             } catch (NotFoundException e) {
                 listener.getLogger().println("Container already gone.");
             } catch (Exception ex) {
-                listener.error("Failed to remove instance " + getContainerId() + " for slave " + name + " due to exception: " + ex.getMessage());
+                listener.error("Failed to remove instance " + containerId  + " for slave " + name + " due to exception: " + ex.getMessage());
                 listener.error("Causing exception for failre on removing instance was", ex);
             }
         });

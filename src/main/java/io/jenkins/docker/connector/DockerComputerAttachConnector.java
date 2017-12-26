@@ -18,13 +18,7 @@ import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.Serializable;
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -64,8 +58,8 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
     }
 
     @Override
-    protected ComputerLauncher createLauncher(DockerAPI api, String workdir, InspectContainerResponse inspect, TaskListener listener) throws IOException, InterruptedException {
-        return new DockerAttachLauncher(api, inspect.getId(), user, workdir);
+    protected ComputerLauncher createLauncher(DockerContainerExecuter containerExecuter) throws IOException, InterruptedException {
+        return new DockerAttachLauncher(containerExecuter, user);
     }
 
     @Override
@@ -89,23 +83,23 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
 
     private static class DockerAttachLauncher extends ComputerLauncher {
 
-        private final DockerAPI api;
-        private final String containerId;
+        private final DockerContainerExecuter dockerContainerExecuter;
         private final String user;
-        private final String remoteFs;
 
-        private DockerAttachLauncher(DockerAPI api, String containerId, String user, String remoteFs) {
-            this.api = api;
-            this.containerId = containerId;
+        private DockerAttachLauncher(DockerContainerExecuter dockerContainerExecuter, String user) {
+            this.dockerContainerExecuter = dockerContainerExecuter;
             this.user = user;
-            this.remoteFs = remoteFs;
         }
 
         public void launch(final SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+            final InspectContainerResponse inspect = dockerContainerExecuter.executeContainer();
+            final DockerAPI api = dockerContainerExecuter.getDockerAPI();
             final DockerClient client = api.getClient();
+            final String containerId = inspect.getId();
+            final String remoteFs = dockerContainerExecuter.getWorkdir();
 
             final PrintStream logger = computer.getListener().getLogger();
-            logger.println("Connecting to docker container "+containerId);
+            logger.println("Connecting to docker container "+ containerId );
 
             final ExecCreateCmd cmd = client.execCreateCmd(containerId)
                     .withAttachStdin(true)
