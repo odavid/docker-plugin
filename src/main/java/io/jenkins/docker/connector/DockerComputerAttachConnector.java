@@ -59,7 +59,8 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
 
     @Override
     protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        return new DockerAttachLauncher(api, containerExecuter, user, workdir, cmd, this);
+        InspectContainerResponse response = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
+        return new DockerAttachLauncher(api, response.getId(), user, workdir);
     }
 
     @Override
@@ -83,35 +84,23 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
 
     private static class DockerAttachLauncher extends ComputerLauncher {
 
-        private final DockerContainerExecuter dockerContainerExecuter;
-        private final String user;
-        private final String workdir;
-        private final CreateContainerCmd cmd;
-        private final DockerComputerAttachConnector connector;
         private final DockerAPI api;
+        private final String containerId;
+        private final String user;
+        private final String remoteFs;
 
-        private DockerAttachLauncher(DockerAPI api,
-                                     DockerContainerExecuter dockerContainerExecuter,
-                                     String user,
-                                     String workdir,
-                                     CreateContainerCmd cmd,
-                                     DockerComputerAttachConnector connector) {
+        private DockerAttachLauncher(DockerAPI api, String containerId, String user, String remoteFs) {
             this.api = api;
-            this.dockerContainerExecuter = dockerContainerExecuter;
+            this.containerId = containerId;
             this.user = user;
-            this.workdir = workdir;
-            this.cmd = cmd;
-            this.connector = connector;
+            this.remoteFs = remoteFs;
         }
 
         public void launch(final SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-            final InspectContainerResponse inspect = dockerContainerExecuter.executeContainer(api, listener, cmd, workdir, connector);
             final DockerClient client = api.getClient();
-            final String containerId = inspect.getId();
-            final String remoteFs = workdir;
 
             final PrintStream logger = computer.getListener().getLogger();
-            logger.println("Connecting to docker container "+ containerId );
+            logger.println("Connecting to docker container "+containerId);
 
             final ExecCreateCmd cmd = client.execCreateCmd(containerId)
                     .withAttachStdin(true)
