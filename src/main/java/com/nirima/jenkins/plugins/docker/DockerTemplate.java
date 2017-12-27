@@ -422,7 +422,7 @@ public class DockerTemplate implements Describable<DockerTemplate> {
 
         final DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, cmd);
         String uniq = Long.toHexString(System.nanoTime());
-        DockerTransientNode node = new DockerTransientNode(uniq, launcher);
+        DockerTransientNode node = new DockerTransientNode(uniq, remoteFs, api, launcher);
         node.setNodeDescription("Docker Agent [" + getImage() + " on "+ api.getDockerHost().getUri() + "]");
         node.setMode(mode);
         node.setLabelString(labelString);

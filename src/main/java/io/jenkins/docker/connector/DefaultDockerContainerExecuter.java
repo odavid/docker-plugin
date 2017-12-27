@@ -14,42 +14,8 @@ public class DefaultDockerContainerExecuter implements DockerContainerExecuter, 
 
     private static final long serialVersionUID = 1L;
 
-    private final DockerAPI dockerAPI;
-    private final String workdir;
-    private final transient TaskListener listener;
-    private final transient CreateContainerCmd cmd;
-    private final transient DockerComputerConnector connector;
     // This value is initialized when container is being started
     private String containerId;
-
-    public DefaultDockerContainerExecuter(DockerComputerConnector connector,
-                                          DockerAPI dockerAPI, TaskListener listener, String workdir, CreateContainerCmd cmd){
-        this.connector = connector;
-        this.dockerAPI = dockerAPI;
-        this.listener = listener;
-        this.workdir = workdir;
-        this.cmd = cmd;
-    }
-
-    @Override
-    public DockerAPI getDockerAPI() {
-        return dockerAPI;
-    }
-
-    @Override
-    public TaskListener getTaskListener() {
-        return listener;
-    }
-
-    @Override
-    public String getWorkdir() {
-        return workdir;
-    }
-
-    @Override
-    public CreateContainerCmd getCreateContainerCmd() {
-        return cmd;
-    }
 
     @Override
     public String getContainerId() throws IllegalStateException{
@@ -60,7 +26,7 @@ public class DefaultDockerContainerExecuter implements DockerContainerExecuter, 
     }
 
     @Override
-    public InspectContainerResponse executeContainer() throws IOException, InterruptedException{
+    public InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir, DockerComputerConnector connector) throws IOException, InterruptedException{
         final DockerClient client = dockerAPI.getClient();
         connector.beforeContainerCreated(dockerAPI, workdir, cmd);
         containerId = cmd.exec().getId();

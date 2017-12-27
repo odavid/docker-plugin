@@ -82,13 +82,13 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
     }
 
     public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter(api, listener, workdir, cmd);
-        final ComputerLauncher launcher = createLauncher(dockerContainerExecuter);
-        return new DockerContainerComputerLauncher(launcher, dockerContainerExecuter);
+        DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter();
+        final ComputerLauncher launcher = createLauncher(api, dockerContainerExecuter, listener, workdir, cmd);
+        return new DockerContainerComputerLauncher(launcher, dockerContainerExecuter, api);
     }
 
-    protected DockerContainerExecuter getDockerContainerExecuter(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd){
-        return new DefaultDockerContainerExecuter(this, api, listener, workdir, cmd);
+    protected DockerContainerExecuter getDockerContainerExecuter(){
+        return new DefaultDockerContainerExecuter();
     }
 
 
@@ -96,7 +96,11 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
      * Create a Launcher to create an Agent with this container. Can assume container has been created by this
      * DockerAgentConnector so adequate setup did take place.
      */
-    protected abstract ComputerLauncher createLauncher(DockerContainerExecuter containerExecuter) throws IOException, InterruptedException;
+    protected abstract ComputerLauncher createLauncher(DockerAPI api,
+                                                       DockerContainerExecuter containerExecuter,
+                                                       TaskListener listener,
+                                                       String workdir,
+                                                       CreateContainerCmd cmd) throws IOException, InterruptedException;
 
 
 }

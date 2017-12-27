@@ -8,15 +8,12 @@ import io.jenkins.docker.client.DockerAPI;
 import java.io.IOException;
 
 public interface DockerContainerExecuter {
-    DockerAPI getDockerAPI();
-
-    TaskListener getTaskListener();
-
-    String getWorkdir();
-
-    CreateContainerCmd getCreateContainerCmd();
-
     String getContainerId() throws IllegalStateException;
 
-    InspectContainerResponse executeContainer() throws IOException, InterruptedException;
+    InspectContainerResponse executeContainer(DockerAPI dockerAPI,
+                                              TaskListener listener,
+                                              CreateContainerCmd cmd,
+                                              String workdir,
+                                              DockerComputerConnector connector)
+            throws IOException, InterruptedException;
 }

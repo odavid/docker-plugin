@@ -16,6 +16,7 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.ItemGroup;
+import hudson.model.TaskListener;
 import hudson.plugins.sshslaves.SSHLauncher;
 import hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy;
 import hudson.plugins.sshslaves.verifiers.SshHostKeyVerificationStrategy;
@@ -208,9 +209,12 @@ public class DockerComputerSSHConnector extends DockerComputerConnector {
     }
 
     @Override
-    protected ComputerLauncher createLauncher(DockerContainerExecuter containerExecuter) throws IOException, InterruptedException {
-        final InspectContainerResponse inspect = containerExecuter.executeContainer();
-        final DockerAPI api = containerExecuter.getDockerAPI();
+    protected ComputerLauncher createLauncher(DockerAPI api,
+                                              DockerContainerExecuter containerExecuter,
+                                              TaskListener listener,
+                                              String workdir,
+                                              CreateContainerCmd cmd) throws IOException, InterruptedException {
+        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
         if ("exited".equals(inspect.getState().getStatus())) {
             // Something went wrong
             // FIXME report error "somewhere" visible to end user.

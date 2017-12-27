@@ -66,7 +66,11 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
 
     @Override
-    protected ComputerLauncher createLauncher(final DockerContainerExecuter containerExecuter) throws IOException, InterruptedException {
+    protected ComputerLauncher createLauncher(final DockerAPI api,
+                                              final DockerContainerExecuter containerExecuter,
+                                              TaskListener listener,
+                                              final String workdir,
+                                              final CreateContainerCmd cmd) throws IOException, InterruptedException {
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -76,14 +80,12 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-                final DockerAPI api = containerExecuter.getDockerAPI();
-                final DockerClient client = api.getClient();
-                final String workdir = containerExecuter.getWorkdir();
-                final InspectContainerResponse inspect = containerExecuter.executeContainer();
+                final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, DockerComputerJNLPConnector.this);
 
                 List<String> args = buildCommand(workdir, computer);
 
                 final String containerId = inspect.getId();
+                final DockerClient client = api.getClient();
                 final ExecCreateCmd cmd = client.execCreateCmd(containerId)
                         .withAttachStdout(true)
                         .withTty(true)

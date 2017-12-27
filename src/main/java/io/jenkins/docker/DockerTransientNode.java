@@ -15,6 +15,7 @@ import io.jenkins.docker.client.DockerAPI;
 import io.jenkins.docker.connector.DockerContainerComputerLauncher;
 import io.jenkins.docker.connector.DockerContainerExecuter;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -30,11 +31,11 @@ public class DockerTransientNode extends Slave {
 
     private String cloudId;
 
-    private final DockerContainerExecuter dockerContainerExecuter;
+    private final DockerAPI api;
 
-    public DockerTransientNode(@Nonnull String slaveUniqueName, DockerContainerComputerLauncher launcher) throws Descriptor.FormException, IOException {
-        super("docker-" + slaveUniqueName, launcher.getDockerContainerExecuter().getWorkdir(), launcher);
-        dockerContainerExecuter = launcher.getDockerContainerExecuter();
+    public DockerTransientNode(@Nonnull String slaveUniqueName, String workdir, DockerAPI api, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
+        super("docker-" + slaveUniqueName, workdir, launcher);
+        this.api = api;
         setNumExecutors(1);
         setMode(Mode.EXCLUSIVE);
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
@@ -63,8 +64,19 @@ public class DockerTransientNode extends Slave {
         this.cloudId = cloudId;
     }
 
-    public DockerAPI getDockerAPI(){ return dockerContainerExecuter.getDockerAPI();}
-    public String getContainerId(){ return dockerContainerExecuter.getContainerId();}
+    public DockerAPI getDockerAPI(){ return api;}
+    public String getContainerId(){
+        if(getLauncher() instanceof DockerContainerComputerLauncher) {
+            return ((DockerContainerComputerLauncher) getLauncher()).getContainerId();
+        }else{
+            //Old node names were docker-${containerId}. This is for the sake of resolving a DockerSlave
+            String nodeName = getNodeName();
+            if(StringUtils.isNotEmpty(nodeName) && nodeName.startsWith("docker-")){
+                return nodeName.replaceAll("docker-", "");
+            }
+            throw new IllegalStateException("Cannot get containerName, launcher is not instanceof DockerContainerComputerLauncher");
+        }
+    }
 
     @Override
     public DockerComputer createComputer() {
