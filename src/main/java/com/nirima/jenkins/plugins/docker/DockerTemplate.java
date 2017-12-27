@@ -421,14 +421,16 @@ public class DockerTemplate implements Describable<DockerTemplate> {
         fillContainerConfig(cmd);
 
         final DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, cmd);
+        // Since container can now be launched during slave launch, we need an alternative unique node name
         String uniq = Long.toHexString(System.nanoTime());
-        DockerTransientNode node = new DockerTransientNode(uniq, remoteFs, api, launcher);
+        DockerTransientNode node = new DockerTransientNode(uniq, remoteFs, launcher);
         node.setNodeDescription("Docker Agent [" + getImage() + " on "+ api.getDockerHost().getUri() + "]");
         node.setMode(mode);
         node.setLabelString(labelString);
         node.setRetentionStrategy(retentionStrategy);
         node.setNodeProperties(nodeProperties);
         node.setRemoveVolumes(removeVolumes);
+        node.setDockerAPI(api);
         return node;
     }
 

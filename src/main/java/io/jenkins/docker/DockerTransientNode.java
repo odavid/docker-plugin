@@ -26,19 +26,41 @@ import java.io.IOException;
  * @author <a href="mailto:nicolas.deloof@gmail.com">Nicolas De Loof</a>
  */
 public class DockerTransientNode extends Slave {
-    
+
+    private DockerAPI dockerAPI;
+
     private boolean removeVolumes;
 
     private String cloudId;
 
-    private final DockerAPI api;
 
-    public DockerTransientNode(@Nonnull String slaveUniqueName, String workdir, DockerAPI api, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
+    public DockerTransientNode(@Nonnull String slaveUniqueName, String workdir, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
         super("docker-" + slaveUniqueName, workdir, launcher);
-        this.api = api;
         setNumExecutors(1);
         setMode(Mode.EXCLUSIVE);
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
+    }
+
+    public String getContainerId(){
+        if(getLauncher() instanceof DockerContainerComputerLauncher) {
+            return ((DockerContainerComputerLauncher) getLauncher()).getContainerId();
+        }else{
+            //Old node names were docker-${containerId}. This is for the sake of resolving a DockerSlave
+            String nodeName = getNodeName();
+            if(StringUtils.isNotEmpty(nodeName) && nodeName.startsWith("docker-")){
+                return nodeName.replaceAll("docker-", "");
+            }
+            throw new IllegalStateException("Cannot get containerName, launcher is not instanceof DockerContainerComputerLauncher");
+        }
+    }
+
+    public void setDockerAPI(DockerAPI dockerAPI){
+        this.dockerAPI = dockerAPI;
+    }
+
+
+    public DockerAPI getDockerAPI(){
+        return dockerAPI;
     }
 
     public String getDisplayName() {
@@ -62,20 +84,6 @@ public class DockerTransientNode extends Slave {
 
     public void setCloudId(String cloudId) {
         this.cloudId = cloudId;
-    }
-
-    public DockerAPI getDockerAPI(){ return api;}
-    public String getContainerId(){
-        if(getLauncher() instanceof DockerContainerComputerLauncher) {
-            return ((DockerContainerComputerLauncher) getLauncher()).getContainerId();
-        }else{
-            //Old node names were docker-${containerId}. This is for the sake of resolving a DockerSlave
-            String nodeName = getNodeName();
-            if(StringUtils.isNotEmpty(nodeName) && nodeName.startsWith("docker-")){
-                return nodeName.replaceAll("docker-", "");
-            }
-            throw new IllegalStateException("Cannot get containerName, launcher is not instanceof DockerContainerComputerLauncher");
-        }
     }
 
     @Override
