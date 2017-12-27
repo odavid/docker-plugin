@@ -51,20 +51,22 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
         this.user = user;
     }
 
-    @Override
-    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        ensureWaiting(cmd);
-    }
-
-    @Override
-    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-        final DockerClient client = api.getClient();
-        injectRemotingJar(containerId, workdir, client);
-    }
 
     @Override
     protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
+        final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
+            @Override
+            public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+                ensureWaiting(cmd);
+            }
+
+            @Override
+            public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
+                final DockerClient client = api.getClient();
+                injectRemotingJar(containerId, workdir, client);
+            }
+        };
+        InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
         return new DockerAttachLauncher(api, inspect.getId(), user, workdir);
     }
 

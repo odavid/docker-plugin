@@ -26,14 +26,14 @@ public class DefaultDockerContainerExecuter implements DockerContainerExecuter, 
     }
 
     @Override
-    public InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir, DockerComputerConnector connector) throws IOException, InterruptedException{
+    public InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir, DockerContainerLifecycleHandler handler) throws IOException, InterruptedException{
         final DockerClient client = dockerAPI.getClient();
-        connector.beforeContainerCreated(dockerAPI, workdir, cmd);
+        handler.beforeContainerCreated(dockerAPI, workdir, cmd);
         containerId = cmd.exec().getId();
         try {
-            connector.beforeContainerStarted(dockerAPI, workdir, containerId);
+            handler.beforeContainerStarted(dockerAPI, workdir, containerId);
             client.startContainerCmd(containerId).exec();
-            connector.afterContainerStarted(dockerAPI, workdir, containerId);
+            handler.afterContainerStarted(dockerAPI, workdir, containerId);
         } catch (DockerException e) {
             // if something went wrong, cleanup aborted container
             client.removeContainerCmd(containerId).withForce(true).exec();

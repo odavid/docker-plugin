@@ -71,6 +71,19 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
                                               TaskListener listener,
                                               final String workdir,
                                               final CreateContainerCmd cmd) throws IOException, InterruptedException {
+        final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
+            @Override
+            public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+                ensureWaiting(cmd);
+            }
+
+            @Override
+            public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
+                final DockerClient client = api.getClient();
+                injectRemotingJar(containerId, workdir, client);
+            }
+        };
+
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -81,7 +94,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
                 final DockerClient client = api.getClient();
-                final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, DockerComputerJNLPConnector.this);
+                final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
 
                 List<String> args = buildCommand(workdir, computer);
 
@@ -107,17 +120,6 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
             }
         };
 
-    }
-
-    @Override
-    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        ensureWaiting(cmd);
-    }
-
-    @Override
-    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-        final DockerClient client = api.getClient();
-        injectRemotingJar(containerId, workdir, client);
     }
 
     private List<String> buildCommand(String workdir, SlaveComputer computer) {

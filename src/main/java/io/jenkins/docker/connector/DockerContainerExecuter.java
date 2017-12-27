@@ -14,6 +14,6 @@ public interface DockerContainerExecuter {
                                               TaskListener listener,
                                               CreateContainerCmd cmd,
                                               String workdir,
-                                              DockerComputerConnector connector)
+                                              DockerContainerLifecycleHandler handler)
             throws IOException, InterruptedException;
 }

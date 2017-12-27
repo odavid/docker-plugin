@@ -147,8 +147,8 @@ public class DockerComputerSSHConnector extends DockerComputerConnector {
         this.retryWaitTime = retryWaitTime;
     }
 
-    @Override
-    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+
+    protected void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
 
         // TODO define a strategy for SSHD process configuration so we support more than openssh's sshd
         if (cmd.getCmd() == null || cmd.getCmd().length == 0) {
@@ -177,44 +177,51 @@ public class DockerComputerSSHConnector extends DockerComputerConnector {
     }
 
     @Override
-    public void beforeContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-
-        final String key = sshKeyStrategy.getInjectedKey();
-        if (key != null) {
-            String AuthorizedKeysCommand = "#!/bin/sh\n"
-                    + "[ \"$1\" = \"" + sshKeyStrategy.getUser() + "\" ] "
-                    + "&& echo '" + key + "'"
-                    + "|| :";
-
-            try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                 TarArchiveOutputStream tar = new TarArchiveOutputStream(bos)) {
-
-                TarArchiveEntry entry = new TarArchiveEntry("authorized_key");
-                entry.setSize(AuthorizedKeysCommand.getBytes().length);
-                entry.setMode(0700);
-                tar.putArchiveEntry(entry);
-                tar.write(AuthorizedKeysCommand.getBytes());
-                tar.closeArchiveEntry();
-                tar.close();
-
-                try (InputStream is = new ByteArrayInputStream(bos.toByteArray())) {
-
-                    api.getClient().copyArchiveToContainerCmd(containerId)
-                            .withTarInputStream(is)
-                            .withRemotePath("/root")
-                            .exec();
-                }
-            }
-        }
-    }
-
-    @Override
     protected ComputerLauncher createLauncher(DockerAPI api,
                                               DockerContainerExecuter containerExecuter,
                                               TaskListener listener,
                                               String workdir,
                                               CreateContainerCmd cmd) throws IOException, InterruptedException {
-        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
+        final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler() {
+            @Override
+            public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+                DockerComputerSSHConnector.this.beforeContainerCreated(api, workdir, cmd);
+            }
+
+            @Override
+            public void beforeContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
+
+                final String key = sshKeyStrategy.getInjectedKey();
+                if (key != null) {
+                    String AuthorizedKeysCommand = "#!/bin/sh\n"
+                            + "[ \"$1\" = \"" + sshKeyStrategy.getUser() + "\" ] "
+                            + "&& echo '" + key + "'"
+                            + "|| :";
+
+                    try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                         TarArchiveOutputStream tar = new TarArchiveOutputStream(bos)) {
+
+                        TarArchiveEntry entry = new TarArchiveEntry("authorized_key");
+                        entry.setSize(AuthorizedKeysCommand.getBytes().length);
+                        entry.setMode(0700);
+                        tar.putArchiveEntry(entry);
+                        tar.write(AuthorizedKeysCommand.getBytes());
+                        tar.closeArchiveEntry();
+                        tar.close();
+
+                        try (InputStream is = new ByteArrayInputStream(bos.toByteArray())) {
+
+                            api.getClient().copyArchiveToContainerCmd(containerId)
+                                    .withTarInputStream(is)
+                                    .withRemotePath("/root")
+                                    .exec();
+                        }
+                    }
+                }
+            }
+        };
+
+        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
         if ("exited".equals(inspect.getState().getStatus())) {
             // Something went wrong
             // FIXME report error "somewhere" visible to end user.
