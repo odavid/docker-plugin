@@ -35,7 +35,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
     private String user;
     private final JNLPLauncher jnlpLauncher;
     private String jenkinsUrl;
-    private boolean useStandardJNLPArgs;
+    private boolean passSlaveConnectionArgs;
 
     @DataBoundConstructor
     public DockerComputerJNLPConnector(JNLPLauncher jnlpLauncher) {
@@ -58,19 +58,19 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
     public void setJenkinsUrl(String jenkinsUrl){ this.jenkinsUrl = jenkinsUrl; }
 
     @DataBoundSetter
-    public void setUseStandardJNLPArgs(boolean useStandardJNLPArgs){
-        this.useStandardJNLPArgs = useStandardJNLPArgs;
+    public void setPassSlaveConnectionArgs(boolean passSlaveConnectionArgs){
+        this.passSlaveConnectionArgs = passSlaveConnectionArgs;
     }
 
-    public boolean isUseStandardJNLPArgs() { return useStandardJNLPArgs; }
+    public boolean isPassSlaveConnectionArgs() { return passSlaveConnectionArgs; }
 
     public DockerComputerJNLPConnector withUser(String user) {
         this.user = user;
         return this;
     }
 
-    public DockerComputerJNLPConnector withUseStandardJNLPArgs(boolean useStandardJNLPArgs){
-        setUseStandardJNLPArgs(useStandardJNLPArgs);
+    public DockerComputerJNLPConnector withPassSlaveConnectionArgs(boolean passSlaveConnectionArgs){
+        setPassSlaveConnectionArgs(passSlaveConnectionArgs);
         return this;
     }
 
@@ -102,21 +102,21 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
                 final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
                     @Override
                     public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-                        if(!useStandardJNLPArgs) {
+                        if(!passSlaveConnectionArgs) {
                             ensureWaiting(cmd);
                         }
                     }
 
                     @Override
                     public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-                        if(!useStandardJNLPArgs) {
+                        if(!passSlaveConnectionArgs) {
                             final DockerClient client = api.getClient();
                             injectRemotingJar(containerId, workdir, client);
                         }
                     }
                 };
                 CreateContainerCmd cmd = template.createContainerCmd(api);
-                if(!useStandardJNLPArgs){
+                if(!passSlaveConnectionArgs){
                     launchAndInjectJar(computer, listener, handler, api, containerExecuter, workdir, cmd);
                 }else{
                     launchStandardJNLPImage(computer, listener, handler, api, containerExecuter, workdir, cmd);

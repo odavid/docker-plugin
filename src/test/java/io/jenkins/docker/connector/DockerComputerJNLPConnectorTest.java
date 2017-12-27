@@ -58,7 +58,7 @@ public class DockerComputerJNLPConnectorTest extends DockerComputerConnectorTest
                 new DockerTemplateBase("jenkins/jnlp-slave"),
                 new DockerComputerJNLPConnector(new JNLPLauncher(null, null)).withUser("jenkins")
                         .withJenkinsUrl(uri.toString())
-                        .withUseStandardJNLPArgs(true),
+                        .withPassSlaveConnectionArgs(true),
                 "docker-agent", "/home/jenkins/agent", "10"
         );
 
