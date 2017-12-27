@@ -5,6 +5,7 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.ExecCreateCmd;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
@@ -53,7 +54,7 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
 
 
     @Override
-    protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+    protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
         final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
             @Override
             public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
@@ -66,6 +67,7 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
                 injectRemotingJar(containerId, workdir, client);
             }
         };
+        CreateContainerCmd cmd = template.createContainerCmd(api);
         InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
         return new DockerAttachLauncher(api, inspect.getId(), user, workdir);
     }

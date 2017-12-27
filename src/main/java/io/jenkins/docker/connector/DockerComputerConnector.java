@@ -3,6 +3,7 @@ package io.jenkins.docker.connector;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.nirima.jenkins.plugins.docker.DockerSlave;
+import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import com.thoughtworks.xstream.InitializationException;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.TaskListener;
@@ -64,9 +65,9 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         return workdir + '/' + remoting.getName();
     }
 
-    public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+    public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
         DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter();
-        final ComputerLauncher launcher = createLauncher(api, dockerContainerExecuter, listener, workdir, cmd);
+        final ComputerLauncher launcher = createLauncher(api, dockerContainerExecuter, listener, workdir, template);
         return new DockerContainerComputerLauncher(launcher, dockerContainerExecuter, api);
     }
 
@@ -83,7 +84,7 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
                                                        DockerContainerExecuter containerExecuter,
                                                        TaskListener listener,
                                                        String workdir,
-                                                       CreateContainerCmd cmd) throws IOException, InterruptedException;
+                                                       DockerTemplate template) throws IOException, InterruptedException;
 
 
 }

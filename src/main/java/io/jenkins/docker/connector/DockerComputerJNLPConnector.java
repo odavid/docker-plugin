@@ -6,6 +6,7 @@ import com.github.dockerjava.api.command.ExecCreateCmd;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.core.command.ExecStartResultCallback;
+import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
@@ -88,7 +89,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
                                               final DockerContainerExecuter containerExecuter,
                                               TaskListener listener,
                                               final String workdir,
-                                              final CreateContainerCmd cmd) throws IOException, InterruptedException {
+                                              final DockerTemplate template) throws IOException, InterruptedException {
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -114,6 +115,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
                         }
                     }
                 };
+                CreateContainerCmd cmd = template.createContainerCmd(api);
                 if(!useStandardJNLPArgs){
                     launchAndInjectJar(computer, listener, handler, api, containerExecuter, workdir, cmd);
                 }else{

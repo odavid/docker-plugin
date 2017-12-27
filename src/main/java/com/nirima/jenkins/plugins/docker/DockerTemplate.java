@@ -409,18 +409,22 @@ public class DockerTemplate implements Describable<DockerTemplate> {
 
     }
 
+    public final CreateContainerCmd createContainerCmd(DockerAPI api){
+        final DockerClient client = api.getClient();
+        CreateContainerCmd cmd = client.createContainerCmd(this.getImage());
+        this.fillContainerConfig(cmd);
+        return cmd;
+    }
+
     @Restricted(NoExternalUse.class)
     public DockerTransientNode provisionNode(DockerAPI api, TaskListener listener) throws IOException, Descriptor.FormException, InterruptedException {
 
-        final DockerClient client = api.getClient();
         final DockerComputerConnector connector = getConnector();
         pullImage(api, listener);
 
         LOGGER.info("Trying to run container for {}", getImage());
-        CreateContainerCmd cmd = client.createContainerCmd(getImage());
-        fillContainerConfig(cmd);
 
-        final DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, cmd);
+        final DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, this);
         // Since container can now be launched during slave launch, we need an alternative unique node name
         String uniq = Long.toHexString(System.nanoTime());
         DockerTransientNode node = new DockerTransientNode(uniq, remoteFs, launcher);

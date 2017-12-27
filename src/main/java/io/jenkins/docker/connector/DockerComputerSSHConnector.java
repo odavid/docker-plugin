@@ -9,6 +9,7 @@ import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.NetworkSettings;
 import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
+import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import com.nirima.jenkins.plugins.docker.DockerTemplateBase;
 import com.nirima.jenkins.plugins.docker.utils.PortUtils;
 import com.trilead.ssh2.signature.RSAKeyAlgorithm;
@@ -181,7 +182,7 @@ public class DockerComputerSSHConnector extends DockerComputerConnector {
                                               DockerContainerExecuter containerExecuter,
                                               TaskListener listener,
                                               String workdir,
-                                              CreateContainerCmd cmd) throws IOException, InterruptedException {
+                                              DockerTemplate template) throws IOException, InterruptedException {
         final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler() {
             @Override
             public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
@@ -221,6 +222,7 @@ public class DockerComputerSSHConnector extends DockerComputerConnector {
             }
         };
 
+        CreateContainerCmd cmd = template.createContainerCmd(api);
         final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
         if ("exited".equals(inspect.getState().getStatus())) {
             // Something went wrong
