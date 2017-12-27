@@ -89,23 +89,6 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
                                               TaskListener listener,
                                               final String workdir,
                                               final CreateContainerCmd cmd) throws IOException, InterruptedException {
-        final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
-            @Override
-            public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-                if(!useStandardJNLPArgs) {
-                    ensureWaiting(cmd);
-                }
-            }
-
-            @Override
-            public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-                if(!useStandardJNLPArgs) {
-                    final DockerClient client = api.getClient();
-                    injectRemotingJar(containerId, workdir, client);
-                }
-            }
-        };
-
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -115,6 +98,22 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+                final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
+                    @Override
+                    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+                        if(!useStandardJNLPArgs) {
+                            ensureWaiting(cmd);
+                        }
+                    }
+
+                    @Override
+                    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
+                        if(!useStandardJNLPArgs) {
+                            final DockerClient client = api.getClient();
+                            injectRemotingJar(containerId, workdir, client);
+                        }
+                    }
+                };
                 if(!useStandardJNLPArgs){
                     launchAndInjectJar(computer, listener, handler, api, containerExecuter, workdir, cmd);
                 }else{

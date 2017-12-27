@@ -5,8 +5,11 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import io.jenkins.docker.client.DockerAPI;
 
 import java.io.IOException;
+import java.io.Serializable;
 
-public class DockerContainerLifecycleHandler {
+public class DockerContainerLifecycleHandler implements Serializable{
+    private static final long serialVersionUID = 1L;
+
     /**
      * Can be overridden by concrete implementations to provide some customization to the container creation command
      */
