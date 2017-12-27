@@ -8,13 +8,17 @@ import hudson.model.TaskListener;
 import io.jenkins.docker.client.DockerAPI;
 
 import java.io.IOException;
+import java.io.Serializable;
 
-public class DefaultDockerContainerExecuter implements DockerContainerExecuter{
+public class DefaultDockerContainerExecuter implements DockerContainerExecuter, Serializable{
+
+    private static final long serialVersionUID = 1L;
+
     private final DockerAPI dockerAPI;
-    private final TaskListener listener;
     private final String workdir;
-    private final CreateContainerCmd cmd;
-    private final DockerComputerConnector connector;
+    private final transient TaskListener listener;
+    private final transient CreateContainerCmd cmd;
+    private final transient DockerComputerConnector connector;
     // This value is initialized when container is being started
     private String containerId;
 
