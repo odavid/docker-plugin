@@ -6,6 +6,7 @@ import com.github.dockerjava.api.command.ExecCreateCmd;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.core.command.ExecStartResultCallback;
+import com.github.dockerjava.core.command.WaitContainerResultCallback;
 import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import hudson.Extension;
 import hudson.model.Descriptor;
@@ -157,10 +158,12 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
         if (StringUtils.isNotBlank(user)) {
             cmd.withUser(user);
         }
-        cmd.withTty(true);
-        cmd.withAttachStdout(true);
 
+        final PrintStream logger = computer.getListener().getLogger();
         final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
+        api.getClient().waitContainerCmd(inspect.getId())
+                .exec(new WaitContainerResultCallback());
+
     }
 
     private void launchAndInjectJar(SlaveComputer computer,
