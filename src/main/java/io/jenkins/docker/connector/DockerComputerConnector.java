@@ -72,7 +72,7 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
     }
 
     protected DockerContainerExecuter getDockerContainerExecuter(){
-        return new DefaultDockerContainerExecuter();
+        return new DockerContainerExecuter();
     }
 
 
