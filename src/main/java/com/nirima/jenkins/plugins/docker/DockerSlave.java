@@ -29,7 +29,6 @@ public class DockerSlave extends Slave {
     }
 
     protected Object readResolve() {
-        // TODO: FIX this. need to find a way to migrate to DockerTransientNode
         try {
             return new DockerTransientNode(containerId, dockerTemplate.remoteFs, dockerAPI, getLauncher());
         } catch (Descriptor.FormException | IOException e) {
