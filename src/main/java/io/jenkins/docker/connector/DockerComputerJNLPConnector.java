@@ -80,12 +80,12 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+                final DockerClient client = api.getClient();
                 final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, DockerComputerJNLPConnector.this);
 
                 List<String> args = buildCommand(workdir, computer);
 
                 final String containerId = inspect.getId();
-                final DockerClient client = api.getClient();
                 final ExecCreateCmd cmd = client.execCreateCmd(containerId)
                         .withAttachStdout(true)
                         .withTty(true)
