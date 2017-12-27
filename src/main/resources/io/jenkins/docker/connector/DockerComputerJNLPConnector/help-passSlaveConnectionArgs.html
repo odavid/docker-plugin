@@ -1,7 +1,14 @@
 <div>
-    If checked, the container command will pass the jenkins slave connection parameters and will not inject the slave jar.
-    This option enables the user to perform some manipulation within the entrypoint before starting the slave.
-    The following command will be passed:
-    <span>-url &lt;MASTER_URL&gt; -tunnel &lt;TUNNEL&gt; &lt;SECRET&gt; &lt;AGENT_NAME&gt;</span>
-    see <a href="https://github.com/jenkinsci/docker-jnlp-slave/">docker-jnlp-slave</a>
+    <p>
+        <span class="info">Prerequisites:</span> Docker image must derive from <a href="https://github.com/jenkinsci/docker-jnlp-slave/">jenkins/jnlp-slave</a>
+        and Jenkins master has to be accessible over network <em>from</em> container.
+    </p>
+
+    <p>If checked, the container command will pass the jenkins slave connection parameters and will not inject the slave jar.
+        This option enables the user to perform some manipulation within the entrypoint before starting the slave.</p>
+    <br/>
+    <p>The following command will be passed:
+    <pre>-url &lt;MASTER_URL&gt; [-tunnel &lt;TUNNEL&gt;] &lt;SECRET&gt; &lt;AGENT_NAME&gt;</pre>
+    </p>
+    For more details, see <a href="https://github.com/jenkinsci/docker-jnlp-slave/">jenkins/jnlp-slave</a>
 </div>

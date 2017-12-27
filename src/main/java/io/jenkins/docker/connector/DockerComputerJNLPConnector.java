@@ -16,6 +16,7 @@ import hudson.slaves.JNLPLauncher;
 import hudson.slaves.SlaveComputer;
 import io.jenkins.docker.client.DockerAPI;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -132,7 +133,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
         }
 
         args.addAll(Arrays.asList(
-                "-url", jenkinsUrl == null ? Jenkins.getInstance().getRootUrl() : jenkinsUrl,
+                "-url", StringUtils.isEmpty(jenkinsUrl) ? JenkinsLocationConfiguration.get().getUrl() : jenkinsUrl,
                 computer.getJnlpMac(),
                 computer.getName()));
         return args;
@@ -152,7 +153,14 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
         }
         List<String> jnlpArgs = buildJNLPArgs(computer);
         cmd.withCmd(jnlpArgs);
-        containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
+
+        if (StringUtils.isNotBlank(user)) {
+            cmd.withUser(user);
+        }
+        cmd.withTty(true);
+        cmd.withAttachStdout(true);
+
+        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
     }
 
     private void launchAndInjectJar(SlaveComputer computer,
