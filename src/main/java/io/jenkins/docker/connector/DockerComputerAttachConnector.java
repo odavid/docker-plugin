@@ -59,8 +59,8 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
 
     @Override
     protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        InspectContainerResponse response = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
-        return new DockerAttachLauncher(api, response.getId(), user, workdir);
+        InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
+        return new DockerAttachLauncher(api, inspect.getId(), user, workdir);
     }
 
     @Override
