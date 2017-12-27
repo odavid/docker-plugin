@@ -5,7 +5,11 @@
     </p>
 
     <p>If checked, the container command will pass the jenkins slave connection parameters and will not inject the slave jar.
-        This option enables the user to perform some manipulation within the entrypoint before starting the slave.</p>
+        This option enables the user to perform some manipulation within the entrypoint before starting the slave.
+        For example, start the container with root and use gosu to go back to jenkins user.
+        This pattern let the docker slave run docker builds.
+        See <a href="https://github.com/odavid/jenkins-jnlp-slave">https://github.com/odavid/jenkins-jnlp-slave</a>
+    </p>
     <br/>
     <p>The following command will be passed:
     <pre>-url &lt;MASTER_URL&gt; [-tunnel &lt;TUNNEL&gt;] &lt;SECRET&gt; &lt;AGENT_NAME&gt;</pre>
