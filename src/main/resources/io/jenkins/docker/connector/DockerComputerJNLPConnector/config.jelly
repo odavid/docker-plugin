@@ -14,7 +14,7 @@
         <f:textbox/>
     </f:entry>
 
-    <f:entry title="${%Pass Slave Connection Arguments}" field="passSlaveConnectionArgs">
+    <f:entry title="${%Pass Slave Connection Arguments to Entrypoint}" field="passSlaveConnectionArgs">
         <f:checkbox/>
     </f:entry>
 
