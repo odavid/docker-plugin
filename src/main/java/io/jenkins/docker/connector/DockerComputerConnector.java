@@ -65,14 +65,14 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         return workdir + '/' + remoting.getName();
     }
 
-    public DockerContainerComputerLauncher createLauncher(DockerAPI api, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
-        DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter();
+    public DockerContainerComputerLauncher createLauncher(String uniqId, DockerAPI api, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
+        DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter(uniqId);
         final ComputerLauncher launcher = createLauncher(api, dockerContainerExecuter, listener, workdir, template);
         return new DockerContainerComputerLauncher(launcher, dockerContainerExecuter, api);
     }
 
-    protected DockerContainerExecuter getDockerContainerExecuter(){
-        return new DockerContainerExecuter();
+    protected DockerContainerExecuter getDockerContainerExecuter(String uniqId){
+        return new DockerContainerExecuter(uniqId);
     }
 
 

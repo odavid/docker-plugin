@@ -13,7 +13,6 @@ import hudson.slaves.Cloud;
 import hudson.slaves.ComputerLauncher;
 import io.jenkins.docker.client.DockerAPI;
 import io.jenkins.docker.connector.DockerContainerComputerLauncher;
-import io.jenkins.docker.connector.DockerContainerExecuter;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 
@@ -34,8 +33,8 @@ public class DockerTransientNode extends Slave {
     private String cloudId;
 
 
-    public DockerTransientNode(@Nonnull String slaveUniqueName, String workdir, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
-        super("docker-" + slaveUniqueName, workdir, launcher);
+    public DockerTransientNode(@Nonnull String uniqueName, String workdir, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
+        super("docker-" + uniqueName, workdir, launcher);
         setNumExecutors(1);
         setMode(Mode.EXCLUSIVE);
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
@@ -43,7 +42,8 @@ public class DockerTransientNode extends Slave {
 
     public String getContainerId() {
         if(getLauncher() instanceof DockerContainerComputerLauncher) {
-            return ((DockerContainerComputerLauncher) getLauncher()).getContainerId();
+            //TODO: Not sure what is better here, to return the unique name or container Id???
+            return ((DockerContainerComputerLauncher) getLauncher()).getContainerUniqueName();
         }else{
             //Old node names were docker-${containerId}. This is for the sake of resolving a DockerSlave
             String nodeName = getNodeName();

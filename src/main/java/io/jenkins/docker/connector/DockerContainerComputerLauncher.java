@@ -21,16 +21,16 @@ public final class DockerContainerComputerLauncher extends DelegatingComputerLau
         this.api = api;
     }
 
-    public String getContainerId(){
-        return dockerContainerExecuter.getContainerId();
+    public String getContainerUniqueName(){
+        return dockerContainerExecuter.getContainerUniqueName();
     }
 
     @Override
     public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
         try {
             super.launch(computer, listener);
-            final String containerId = dockerContainerExecuter.getContainerId();
-            api.getClient().inspectContainerCmd(containerId).exec();
+            final String containerUniqueName = getContainerUniqueName();
+            api.getClient().inspectContainerCmd(containerUniqueName).exec();
         } catch (NotFoundException e) {
             // Container has been removed
             Queue.withLock( () -> {

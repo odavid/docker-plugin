@@ -13,19 +13,31 @@ import java.io.Serializable;
 public class DockerContainerExecuter implements Serializable{
 
     private static final long serialVersionUID = 1L;
+    private final String containerUniqueName;
 
     // This value is initialized when container is being started
     private String containerId;
 
-    public String getContainerId() throws IllegalStateException{
-        if(containerId == null){
+    public DockerContainerExecuter(String containerUniqueName){
+        this.containerUniqueName = containerUniqueName;
+    }
+
+    public String getContainerId() throws IllegalStateException {
+        if (containerId == null) {
             throw new IllegalStateException("Container was started yet");
         }
         return containerId;
     }
 
+    public String getContainerUniqueName(){ return containerUniqueName; }
+
     public InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir, DockerContainerLifecycleHandler handler) throws IOException, InterruptedException{
         final DockerClient client = dockerAPI.getClient();
+
+        // Setting a unique name, so we can predict the container name before starting it.
+        // This enables us to have the same name for container and the slave
+        cmd.withName(containerUniqueName);
+
         handler.beforeContainerCreated(dockerAPI, workdir, cmd);
         containerId = cmd.exec().getId();
         try {

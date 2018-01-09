@@ -422,12 +422,12 @@ public class DockerTemplate implements Describable<DockerTemplate> {
         final DockerComputerConnector connector = getConnector();
         pullImage(api, listener);
 
-        LOGGER.info("Trying to run container for {}", getImage());
+        // Since container can now be launched during slave launch, we need an alternative unique node name, which will be also the container name
+        String containerUniqueName = Long.toHexString(System.nanoTime());
+        LOGGER.info("Trying to run container for image: {}, with unique name: {}", getImage(), containerUniqueName);
 
-        final DockerContainerComputerLauncher launcher = connector.createLauncher(api, listener, remoteFs, this);
-        // Since container can now be launched during slave launch, we need an alternative unique node name
-        String uniq = Long.toHexString(System.nanoTime());
-        DockerTransientNode node = new DockerTransientNode(uniq, remoteFs, launcher);
+        final DockerContainerComputerLauncher launcher = connector.createLauncher(containerUniqueName, api, listener, remoteFs, this);
+        DockerTransientNode node = new DockerTransientNode(containerUniqueName, remoteFs, launcher);
         node.setNodeDescription("Docker Agent [" + getImage() + " on "+ api.getDockerHost().getUri() + "]");
         node.setMode(mode);
         node.setLabelString(labelString);
