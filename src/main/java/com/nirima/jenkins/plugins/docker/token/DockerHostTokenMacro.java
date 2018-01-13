@@ -1,5 +1,6 @@
 package com.nirima.jenkins.plugins.docker.token;
 
+import com.nirima.jenkins.plugins.docker.DockerSlave;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.Node;
