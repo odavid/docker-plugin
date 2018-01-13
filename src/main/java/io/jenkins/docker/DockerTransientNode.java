@@ -12,9 +12,7 @@ import hudson.model.TaskListener;
 import hudson.slaves.Cloud;
 import hudson.slaves.ComputerLauncher;
 import io.jenkins.docker.client.DockerAPI;
-import io.jenkins.docker.connector.DockerContainerComputerLauncher;
 import jenkins.model.Jenkins;
-import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -45,25 +43,11 @@ public class DockerTransientNode extends Slave {
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
     }
 
-    public String getContainerId() {
-        if(getLauncher() instanceof DockerContainerComputerLauncher) {
-            //TODO: Not sure what is better here, to return the unique name or container Id???
-            return ((DockerContainerComputerLauncher) getLauncher()).getContainerUniqueName();
-        }else{
-            //Old node names were docker-${containerId}. This is for the sake of resolving a DockerSlave
-            String nodeName = getNodeName();
-            if(StringUtils.isNotEmpty(nodeName) && nodeName.startsWith("docker-")){
-                return nodeName.replaceAll("docker-", "");
-            }
-            throw new IllegalStateException("Cannot get containerName, launcher is not instanceof DockerContainerComputerLauncher");
-        }
-    }
-
     public void setContainerId(String containerId){
         this.containerId = containerId;
     }
 
-    public String getContainerUniqueName(){
+    public String getContainerName(){
         return containerUniqueName;
     }
 
@@ -112,7 +96,7 @@ public class DockerTransientNode extends Slave {
         }
 
         Computer.threadPoolForRemoting.submit(() -> {
-            final String containerId = getContainerId();
+            final String containerId = getContainerName();
             DockerClient client = dockerAPI.getClient();
 
             try {
@@ -123,7 +107,7 @@ public class DockerTransientNode extends Slave {
             } catch(NotFoundException e) {
                 listener.getLogger().println("Container already removed " + containerId);
             } catch (Exception ex) {
-                listener.error("Failed to stop instance " + getContainerId() + " for slave " + name + " due to exception", ex.getMessage());
+                listener.error("Failed to stop instance " + getContainerName() + " for slave " + name + " due to exception", ex.getMessage());
                 listener.error("Causing exception for failure on stopping the instance was", ex);
             }
 
@@ -136,7 +120,7 @@ public class DockerTransientNode extends Slave {
             } catch (NotFoundException e) {
                 listener.getLogger().println("Container already gone.");
             } catch (Exception ex) {
-                listener.error("Failed to remove instance " + getContainerId() + " for slave " + name + " due to exception: " + ex.getMessage());
+                listener.error("Failed to remove instance " + getContainerName() + " for slave " + name + " due to exception: " + ex.getMessage());
                 listener.error("Causing exception for failre on removing instance was", ex);
             }
         });

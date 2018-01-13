@@ -96,7 +96,7 @@ public class DockerJobProperty extends OptionalJobProperty<AbstractProject<?, ?>
         }
         DockerTransientNode dockerNode = (DockerTransientNode) node;
 
-        final String containerId = dockerNode.getContainerId();
+        final String containerId = dockerNode.getContainerName();
         final DockerClient client = dockerNode.getDockerAPI().getClient();
         final String dockerHost = dockerNode.getDockerAPI().getDockerHost().getUri();
 

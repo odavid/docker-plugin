@@ -1,6 +1,5 @@
 package com.nirima.jenkins.plugins.docker.token;
 
-import com.nirima.jenkins.plugins.docker.DockerSlave;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.Node;
@@ -20,7 +19,7 @@ public class DockerHostTokenMacro extends DataBoundTokenMacro {
     public String evaluate(AbstractBuild<?, ?> abstractBuild, TaskListener taskListener, String s) throws MacroEvaluationException, IOException, InterruptedException {
         Node node = abstractBuild.getBuiltOn();
         if( node instanceof DockerTransientNode) {
-            return ((DockerTransientNode) node).getContainerId();
+            return ((DockerTransientNode) node).getContainerName();
         }
 
         return null;

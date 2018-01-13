@@ -2,7 +2,6 @@ package io.jenkins.docker;
 
 import com.google.common.base.Objects;
 import com.nirima.jenkins.plugins.docker.DockerCloud;
-import com.nirima.jenkins.plugins.docker.DockerSlave;
 import hudson.slaves.SlaveComputer;
 
 import javax.annotation.CheckForNull;
@@ -31,7 +30,7 @@ public class DockerComputer extends SlaveComputer {
     }
 
     public String getContainerId() {
-        return getNode().getContainerId();
+        return getNode().getContainerName();
     }
 
     public String getCloudId() {

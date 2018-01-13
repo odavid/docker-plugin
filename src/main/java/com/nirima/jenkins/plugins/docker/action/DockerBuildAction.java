@@ -3,7 +3,6 @@ package com.nirima.jenkins.plugins.docker.action;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.github.dockerjava.api.command.InspectContainerResponse;
 import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Describable;
@@ -35,7 +34,7 @@ public class DockerBuildAction implements Action, Serializable, Cloneable, Descr
 
     public DockerBuildAction(DockerTransientNode node) {
         this.containerHost = node.getDockerAPI().getDockerHost().getUri();
-        this.containerId = node.getContainerId();
+        this.containerId = node.getContainerName();
         this.cloudId = node.getCloudId();
 
 
