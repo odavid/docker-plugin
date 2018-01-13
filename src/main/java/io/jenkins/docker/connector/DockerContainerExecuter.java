@@ -31,19 +31,19 @@ public class DockerContainerExecuter implements Serializable{
 
     public String getContainerUniqueName(){ return containerUniqueName; }
 
-    public InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir, DockerContainerLifecycleHandler handler) throws IOException, InterruptedException{
+    public InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir, DockerComputerConnector connector) throws IOException, InterruptedException{
         final DockerClient client = dockerAPI.getClient();
 
         // Setting a unique name, so we can predict the container name before starting it.
         // This enables us to have the same name for container and the slave
         cmd.withName(containerUniqueName);
 
-        handler.beforeContainerCreated(dockerAPI, workdir, cmd);
+        connector.beforeContainerCreated(dockerAPI, workdir, cmd);
         containerId = cmd.exec().getId();
         try {
-            handler.beforeContainerStarted(dockerAPI, workdir, containerId);
+            connector.beforeContainerStarted(dockerAPI, workdir, containerId);
             client.startContainerCmd(containerId).exec();
-            handler.afterContainerStarted(dockerAPI, workdir, containerId);
+            connector.afterContainerStarted(dockerAPI, workdir, containerId);
         } catch (DockerException e) {
             // if something went wrong, cleanup aborted container
             client.removeContainerCmd(containerId).withForce(true).exec();

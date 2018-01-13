@@ -54,21 +54,20 @@ public class DockerComputerAttachConnector extends DockerComputerConnector imple
 
 
     @Override
-    protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
-        final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
-            @Override
-            public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-                ensureWaiting(cmd);
-            }
+    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+        ensureWaiting(cmd);
+    }
 
-            @Override
-            public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-                final DockerClient client = api.getClient();
-                injectRemotingJar(containerId, workdir, client);
-            }
-        };
+    @Override
+    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
+        final DockerClient client = api.getClient();
+        injectRemotingJar(containerId, workdir, client);
+    }
+
+    @Override
+    protected ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
         CreateContainerCmd cmd = template.createContainerCmd(api);
-        InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
+        InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
         return new DockerAttachLauncher(api, inspect.getId(), user, workdir);
     }
 

@@ -101,30 +101,29 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-                final DockerContainerLifecycleHandler handler = new DockerContainerLifecycleHandler(){
-                    @Override
-                    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-                        if(!passSlaveConnectionArgs) {
-                            ensureWaiting(cmd);
-                        }
-                    }
-
-                    @Override
-                    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-                        if(!passSlaveConnectionArgs) {
-                            final DockerClient client = api.getClient();
-                            injectRemotingJar(containerId, workdir, client);
-                        }
-                    }
-                };
                 CreateContainerCmd cmd = template.createContainerCmd(api);
                 if(!passSlaveConnectionArgs){
-                    launchAndInjectJar(computer, listener, handler, api, containerExecuter, workdir, cmd);
+                    launchAndInjectJar(computer, listener, api, containerExecuter, workdir, cmd);
                 }else{
-                    launchStandardJNLPImage(computer, listener, handler, api, containerExecuter, workdir, cmd);
+                    launchStandardJNLPImage(computer, listener, api, containerExecuter, workdir, cmd);
                 }
             }
         };
+    }
+
+    @Override
+    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
+        if(!passSlaveConnectionArgs) {
+            ensureWaiting(cmd);
+        }
+    }
+
+    @Override
+    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
+        if(!passSlaveConnectionArgs) {
+            final DockerClient client = api.getClient();
+            injectRemotingJar(containerId, workdir, client);
+        }
     }
 
     private List<String> buildJNLPArgs(SlaveComputer computer){
@@ -143,7 +142,6 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
     private void launchStandardJNLPImage(SlaveComputer computer,
                                          TaskListener listener,
-                                         DockerContainerLifecycleHandler handler,
                                          DockerAPI api,
                                          DockerContainerExecuter containerExecuter,
                                          String workdir,
@@ -160,7 +158,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
         }
 
         final PrintStream logger = computer.getListener().getLogger();
-        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
+        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
         api.getClient().waitContainerCmd(inspect.getId())
                 .exec(new WaitContainerResultCallback());
 
@@ -168,13 +166,12 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
     private void launchAndInjectJar(SlaveComputer computer,
                                     TaskListener listener,
-                                    DockerContainerLifecycleHandler handler,
                                     DockerAPI api,
                                     DockerContainerExecuter containerExecuter,
                                     String workdir,
                                     CreateContainerCmd cmd)  throws IOException, InterruptedException{
         final DockerClient client = api.getClient();
-        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, handler);
+        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
         List<String> args = new ArrayList<>();
         args.add("java");
 

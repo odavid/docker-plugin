@@ -39,6 +39,23 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
     }
 
     /**
+     * Can be overridden by concrete implementations to provide some customization to the container creation command
+     */
+    public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {}
+
+    /**
+     * Container has been created but not started yet, that's a good opportunity to inject <code>remoting.jar</code>
+     * using {@link #injectRemotingJar(String, String, DockerClient)}
+     */
+    public void beforeContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {}
+
+    /**
+     * Container has started. Good place to check it's healthy before considering agent is ready to accept connexions
+     */
+    public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {}
+
+
+    /**
      * Ensure container is already set with a command, or set one to make it wait indefinitely
      */
     protected void ensureWaiting(CreateContainerCmd cmd) {
