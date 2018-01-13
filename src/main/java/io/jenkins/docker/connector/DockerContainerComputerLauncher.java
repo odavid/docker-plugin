@@ -14,28 +14,20 @@ import io.jenkins.docker.client.DockerAPI;
 import java.io.IOException;
 
 public final class DockerContainerComputerLauncher extends DelegatingComputerLauncher {
-    private final DockerContainerExecuter dockerContainerExecuter;
     private final DockerAPI api;
 
-    DockerContainerComputerLauncher(ComputerLauncher launcher, DockerContainerExecuter dockerContainerExecuter, DockerAPI api){
+    public DockerContainerComputerLauncher(ComputerLauncher launcher, DockerAPI api){
         super(launcher);
-        this.dockerContainerExecuter = dockerContainerExecuter;
         this.api = api;
-    }
-
-    public String getContainerUniqueName(){
-        return dockerContainerExecuter.getContainerUniqueName();
     }
 
     @Override
     public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
         try {
             super.launch(computer, listener);
-            final String containerUniqueName = getContainerUniqueName();
+            final String containerUniqueName = ((DockerComputer)computer).getNode().getContainerId();
             InspectContainerResponse response = api.getClient().inspectContainerCmd(containerUniqueName).exec();
-            if(computer instanceof DockerComputer){
-                ((DockerComputer)computer).getNode().setRealContainerId(response.getId());
-            }
+            ((DockerComputer)computer).getNode().setRealContainerId(response.getId());
         } catch (NotFoundException e) {
             // Container has been removed
             Queue.withLock( () -> {

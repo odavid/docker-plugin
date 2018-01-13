@@ -82,26 +82,11 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         return workdir + '/' + remoting.getName();
     }
 
-    public DockerContainerComputerLauncher createLauncher(String uniqId, DockerAPI api, TaskListener listener, String workdir, DockerTemplate template) throws IOException, InterruptedException {
-        DockerContainerExecuter dockerContainerExecuter = getDockerContainerExecuter(uniqId);
-        final ComputerLauncher launcher = createLauncher(api, dockerContainerExecuter, listener, workdir, template);
-        return new DockerContainerComputerLauncher(launcher, dockerContainerExecuter, api);
-    }
-
-    protected DockerContainerExecuter getDockerContainerExecuter(String uniqId){
-        return new DockerContainerExecuter(uniqId);
-    }
-
-
     /**
      * Create a Launcher to create an Agent with this container. Can assume container has been created by this
      * DockerAgentConnector so adequate setup did take place.
      */
-    protected abstract ComputerLauncher createLauncher(DockerAPI api,
-                                                       DockerContainerExecuter containerExecuter,
-                                                       TaskListener listener,
-                                                       String workdir,
-                                                       DockerTemplate template) throws IOException, InterruptedException;
+    public abstract ComputerLauncher createLauncher(DockerAPI api, DockerContainerExecuter containerExecuter, TaskListener listener, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException;
 
 
 }

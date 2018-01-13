@@ -87,11 +87,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
 
     @Override
-    protected ComputerLauncher createLauncher(final DockerAPI api,
-                                              final DockerContainerExecuter containerExecuter,
-                                              TaskListener listener,
-                                              final String workdir,
-                                              final DockerTemplate template) throws IOException, InterruptedException {
+    public ComputerLauncher createLauncher(final DockerAPI api, final DockerContainerExecuter containerExecuter, TaskListener listener, final String workdir, final CreateContainerCmd cmd) throws IOException, InterruptedException {
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -101,7 +97,6 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-                CreateContainerCmd cmd = template.createContainerCmd(api);
                 if(!passSlaveConnectionArgs){
                     launchAndInjectJar(computer, listener, api, containerExecuter, workdir, cmd);
                 }else{
