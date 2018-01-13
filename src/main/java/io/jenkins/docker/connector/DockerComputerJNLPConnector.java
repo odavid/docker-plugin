@@ -87,7 +87,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
 
     @Override
-    protected ComputerLauncher createLauncher(final DockerAPI api, final String workdir, final CreateContainerCmd cmd, final DockerContainerExecuter containerExecuter, TaskListener listener) throws IOException, InterruptedException {
+    protected ComputerLauncher createLauncher(final DockerAPI api, final String workdir, final CreateContainerCmd cmd, TaskListener listener) throws IOException, InterruptedException {
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -98,9 +98,9 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
                 if(!passSlaveConnectionArgs){
-                    launchAndInjectJar(computer, listener, api, containerExecuter, workdir, cmd);
+                    launchAndInjectJar(computer, listener, api, workdir, cmd);
                 }else{
-                    launchStandardJNLPImage(computer, listener, api, containerExecuter, workdir, cmd);
+                    launchStandardJNLPImage(computer, listener, api, workdir, cmd);
                 }
             }
         };
@@ -135,12 +135,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
     }
 
-    private void launchStandardJNLPImage(SlaveComputer computer,
-                                         TaskListener listener,
-                                         DockerAPI api,
-                                         DockerContainerExecuter containerExecuter,
-                                         String workdir,
-                                         CreateContainerCmd cmd)  throws IOException, InterruptedException {
+    private void launchStandardJNLPImage(SlaveComputer computer, TaskListener listener, DockerAPI api, String workdir, CreateContainerCmd cmd)  throws IOException, InterruptedException {
         String vmargs = jnlpLauncher.vmargs;
         if (StringUtils.isNotBlank(vmargs)) {
             cmd.withEnv("JAVA_OPT=" + vmargs.trim());
@@ -153,20 +148,15 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
         }
 
         final PrintStream logger = computer.getListener().getLogger();
-        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
+        final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
         api.getClient().waitContainerCmd(inspect.getId())
                 .exec(new WaitContainerResultCallback());
 
     }
 
-    private void launchAndInjectJar(SlaveComputer computer,
-                                    TaskListener listener,
-                                    DockerAPI api,
-                                    DockerContainerExecuter containerExecuter,
-                                    String workdir,
-                                    CreateContainerCmd cmd)  throws IOException, InterruptedException{
+    private void launchAndInjectJar(SlaveComputer computer, TaskListener listener, DockerAPI api, String workdir, CreateContainerCmd cmd)  throws IOException, InterruptedException{
         final DockerClient client = api.getClient();
-        final InspectContainerResponse inspect = containerExecuter.executeContainer(api, listener, cmd, workdir, this);
+        final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
         List<String> args = new ArrayList<>();
         args.add("java");
 
