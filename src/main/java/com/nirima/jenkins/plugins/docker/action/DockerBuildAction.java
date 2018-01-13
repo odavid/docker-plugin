@@ -34,7 +34,7 @@ public class DockerBuildAction implements Action, Serializable, Cloneable, Descr
 
     public DockerBuildAction(DockerTransientNode node) {
         this.containerHost = node.getDockerAPI().getDockerHost().getUri();
-        this.containerId = node.getContainerName();
+        this.containerId = node.getContainerId();
         this.cloudId = node.getCloudId();
 
 

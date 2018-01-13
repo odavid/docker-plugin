@@ -24,6 +24,7 @@ import java.io.IOException;
  */
 public class DockerTransientNode extends Slave {
 
+    //Keeping real containerId information, but using containerUniqueName as containerId
     private String containerId;
 
     private String containerUniqueName;
@@ -43,12 +44,13 @@ public class DockerTransientNode extends Slave {
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
     }
 
-    public void setContainerId(String containerId){
+    public void setRealContainerId(String containerId){
         this.containerId = containerId;
     }
 
-    public String getContainerName(){
-        return containerUniqueName;
+    public String getContainerId(){
+        // For old sake. If the containerUniqueName was not introduced yet, use the containerId
+        return containerUniqueName == null ? containerId : containerUniqueName;
     }
 
     public void setDockerAPI(DockerAPI dockerAPI) {
@@ -96,7 +98,7 @@ public class DockerTransientNode extends Slave {
         }
 
         Computer.threadPoolForRemoting.submit(() -> {
-            final String containerId = getContainerName();
+            final String containerId = getContainerId();
             DockerClient client = dockerAPI.getClient();
 
             try {
@@ -107,7 +109,7 @@ public class DockerTransientNode extends Slave {
             } catch(NotFoundException e) {
                 listener.getLogger().println("Container already removed " + containerId);
             } catch (Exception ex) {
-                listener.error("Failed to stop instance " + getContainerName() + " for slave " + name + " due to exception", ex.getMessage());
+                listener.error("Failed to stop instance " + getContainerId() + " for slave " + name + " due to exception", ex.getMessage());
                 listener.error("Causing exception for failure on stopping the instance was", ex);
             }
 
@@ -120,7 +122,7 @@ public class DockerTransientNode extends Slave {
             } catch (NotFoundException e) {
                 listener.getLogger().println("Container already gone.");
             } catch (Exception ex) {
-                listener.error("Failed to remove instance " + getContainerName() + " for slave " + name + " due to exception: " + ex.getMessage());
+                listener.error("Failed to remove instance " + getContainerId() + " for slave " + name + " due to exception: " + ex.getMessage());
                 listener.error("Causing exception for failre on removing instance was", ex);
             }
         });

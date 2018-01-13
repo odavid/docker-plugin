@@ -30,7 +30,7 @@ public class DockerComputer extends SlaveComputer {
     }
 
     public String getContainerId() {
-        return getNode().getContainerName();
+        return getNode().getContainerId();
     }
 
     public String getCloudId() {

@@ -34,7 +34,7 @@ public final class DockerContainerComputerLauncher extends DelegatingComputerLau
             final String containerUniqueName = getContainerUniqueName();
             InspectContainerResponse response = api.getClient().inspectContainerCmd(containerUniqueName).exec();
             if(computer instanceof DockerComputer){
-                ((DockerComputer)computer).getNode().setContainerId(response.getId());
+                ((DockerComputer)computer).getNode().setRealContainerId(response.getId());
             }
         } catch (NotFoundException e) {
             // Container has been removed

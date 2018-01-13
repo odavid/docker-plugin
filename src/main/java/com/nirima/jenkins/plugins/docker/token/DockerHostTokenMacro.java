@@ -19,7 +19,7 @@ public class DockerHostTokenMacro extends DataBoundTokenMacro {
     public String evaluate(AbstractBuild<?, ?> abstractBuild, TaskListener taskListener, String s) throws MacroEvaluationException, IOException, InterruptedException {
         Node node = abstractBuild.getBuiltOn();
         if( node instanceof DockerTransientNode) {
-            return ((DockerTransientNode) node).getContainerName();
+            return ((DockerTransientNode) node).getContainerId();
         }
 
         return null;
