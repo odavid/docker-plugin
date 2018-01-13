@@ -87,7 +87,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
 
     @Override
-    public ComputerLauncher createLauncher(final DockerAPI api, final DockerContainerExecuter containerExecuter, TaskListener listener, final String workdir, final CreateContainerCmd cmd) throws IOException, InterruptedException {
+    protected ComputerLauncher createLauncher(final DockerAPI api, final String workdir, final CreateContainerCmd cmd, final DockerContainerExecuter containerExecuter, TaskListener listener) throws IOException, InterruptedException {
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override

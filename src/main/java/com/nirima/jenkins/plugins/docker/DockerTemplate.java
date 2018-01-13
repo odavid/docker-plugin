@@ -16,6 +16,7 @@ import hudson.Extension;
 import hudson.Util;
 import hudson.model.*;
 import hudson.model.labels.LabelAtom;
+import hudson.slaves.ComputerLauncher;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.NodePropertyDescriptor;
 import hudson.slaves.RetentionStrategy;
@@ -23,8 +24,6 @@ import hudson.util.DescribableList;
 import io.jenkins.docker.DockerTransientNode;
 import io.jenkins.docker.client.DockerAPI;
 import io.jenkins.docker.connector.DockerComputerConnector;
-import io.jenkins.docker.connector.DockerContainerComputerLauncher;
-import io.jenkins.docker.connector.DockerContainerExecuter;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.docker.commons.credentials.DockerRegistryEndpoint;
 import org.kohsuke.accmod.Restricted;
@@ -415,9 +414,7 @@ public class DockerTemplate implements Describable<DockerTemplate> {
         cmd.withName(containerUniqueName);
 
         LOGGER.info("Trying to run container for image: {}, with unique name: {}", getImage(), containerUniqueName);
-        DockerContainerExecuter dockerContainerExecuter = new DockerContainerExecuter();
-        final DockerContainerComputerLauncher launcher = new DockerContainerComputerLauncher(
-                connector.createLauncher(api, dockerContainerExecuter, listener, remoteFs, cmd), api);
+        final ComputerLauncher launcher = connector.createLauncher(api, cmd, remoteFs, listener);
 
         DockerTransientNode node = new DockerTransientNode(containerUniqueName, remoteFs, launcher);
         node.setNodeDescription("Docker Agent [" + getImage() + " on "+ api.getDockerHost().getUri() + "]");
