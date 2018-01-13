@@ -26,6 +26,10 @@ import java.io.IOException;
  */
 public class DockerTransientNode extends Slave {
 
+    private String containerId;
+
+    private String containerUniqueName;
+
     private DockerAPI dockerAPI;
 
     private boolean removeVolumes;
@@ -35,6 +39,7 @@ public class DockerTransientNode extends Slave {
 
     public DockerTransientNode(@Nonnull String uniqueName, String workdir, ComputerLauncher launcher) throws Descriptor.FormException, IOException {
         super("docker-" + uniqueName, workdir, launcher);
+        this.containerUniqueName = uniqueName;
         setNumExecutors(1);
         setMode(Mode.EXCLUSIVE);
         setRetentionStrategy(new DockerOnceRetentionStrategy(10));
@@ -52,6 +57,14 @@ public class DockerTransientNode extends Slave {
             }
             throw new IllegalStateException("Cannot get containerName, launcher is not instanceof DockerContainerComputerLauncher");
         }
+    }
+
+    public void setContainerId(String containerId){
+        this.containerId = containerId;
+    }
+
+    public String getContainerUniqueName(){
+        return containerUniqueName;
     }
 
     public void setDockerAPI(DockerAPI dockerAPI) {

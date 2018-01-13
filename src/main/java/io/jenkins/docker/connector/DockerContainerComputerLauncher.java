@@ -1,11 +1,13 @@
 package io.jenkins.docker.connector;
 
+import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
 import hudson.model.Queue;
 import hudson.model.TaskListener;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.DelegatingComputerLauncher;
 import hudson.slaves.SlaveComputer;
+import io.jenkins.docker.DockerComputer;
 import io.jenkins.docker.DockerTransientNode;
 import io.jenkins.docker.client.DockerAPI;
 
@@ -30,7 +32,10 @@ public final class DockerContainerComputerLauncher extends DelegatingComputerLau
         try {
             super.launch(computer, listener);
             final String containerUniqueName = getContainerUniqueName();
-            api.getClient().inspectContainerCmd(containerUniqueName).exec();
+            InspectContainerResponse response = api.getClient().inspectContainerCmd(containerUniqueName).exec();
+            if(computer instanceof DockerComputer){
+                ((DockerComputer)computer).getNode().setContainerId(response.getId());
+            }
         } catch (NotFoundException e) {
             // Container has been removed
             Queue.withLock( () -> {
