@@ -93,17 +93,19 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
     }
 
     protected final InspectContainerResponse executeContainer(DockerAPI dockerAPI, TaskListener listener, CreateContainerCmd cmd, String workdir) throws IOException, InterruptedException{
-        final DockerClient client = dockerAPI.getClient();
 
         beforeContainerCreated(dockerAPI, workdir, cmd);
         final String containerId = cmd.exec().getId();
+
         try {
             beforeContainerStarted(dockerAPI, workdir, containerId);
-            client.startContainerCmd(containerId).exec();
+
+            dockerAPI.getClient().startContainerCmd(containerId).exec();
+
             afterContainerStarted(dockerAPI, workdir, containerId);
         } catch (DockerException e) {
             // if something went wrong, cleanup aborted container
-            client.removeContainerCmd(containerId).withForce(true).exec();
+            dockerAPI.getClient().removeContainerCmd(containerId).withForce(true).exec();
             throw e;
         }
         final InspectContainerResponse inspect = dockerAPI.getClient().inspectContainerCmd(containerId).exec();
