@@ -97,13 +97,51 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+                final DockerClient client = api.getClient();
+
+                List<String> args = buildCommand(workdir, computer);
                 if(!passSlaveConnectionArgs){
-                    launchAndInjectJar(computer, listener, api, workdir, cmd);
-                }else{
-                    launchStandardJNLPImage(computer, listener, api, workdir, cmd);
+                    final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
+                    final String containerId = inspect.getId();
+                    final ExecCreateCmd cmd = client.execCreateCmd(containerId)
+                            .withAttachStdout(true)
+                            .withTty(true)
+                            .withCmd(args.toArray(new String[args.size()]));
+
+                    if (StringUtils.isNotBlank(user)) {
+                        cmd.withUser(user);
+                    }
+
+                    final ExecCreateCmdResponse exec = cmd.exec();
+
+                    final PrintStream logger = computer.getListener().getLogger();
+                    final ExecStartResultCallback start = client.execStartCmd(exec.getId())
+                            .withDetach(true)
+                            .withTty(true)
+                            .exec(new ExecStartResultCallback(logger, logger));
+
+                    start.awaitCompletion();
+
+                } else{
+                    cmd.withCmd(args.toArray(new String[args.size()]));
+                    String vmargs = jnlpLauncher.vmargs;
+                    if (StringUtils.isNotBlank(vmargs)) {
+                        cmd.withEnv("JAVA_OPT=" + vmargs.trim());
+                    }
+                    if (StringUtils.isNotBlank(user)) {
+                        cmd.withUser(user);
+                    }
+
+                    final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
+                    final String containerId = inspect.getId();
+                    api.getClient().waitContainerCmd(containerId)
+                            .exec(new WaitContainerResultCallback());
+
                 }
+
             }
         };
+
     }
 
     @Override
@@ -121,74 +159,33 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
         }
     }
 
-    private List<String> buildJNLPArgs(SlaveComputer computer){
+    private List<String> buildCommand(String workdir, SlaveComputer computer) {
         List<String> args = new ArrayList<>();
+        // if we are running direct entrypoint, without injecting the slave jar, we do not know the location of the slave jar
+        // so, we only pass the command line arguments of the slave.jar to the entrypoint.
+        // See https://github.com/jenkinsci/docker-jnlp-slave
+        if(!passSlaveConnectionArgs) {
+            args.add("java");
+
+            String vmargs = jnlpLauncher.vmargs;
+            if (StringUtils.isNotBlank(vmargs)) {
+                args.addAll(Arrays.asList(vmargs.split(" ")));
+            }
+
+            args.addAll(Arrays.asList(
+                    "-cp", workdir + "/" + remoting.getName(),
+                    "hudson.remoting.jnlp.Main", "-headless"));
+        }
+
         if (StringUtils.isNotBlank(jnlpLauncher.tunnel)) {
             args.addAll(Arrays.asList("-tunnel", jnlpLauncher.tunnel));
         }
 
         args.addAll(Arrays.asList(
-                "-url", StringUtils.isEmpty(jenkinsUrl) ? JenkinsLocationConfiguration.get().getUrl() : jenkinsUrl,
+                "-url", jenkinsUrl == null ? Jenkins.getInstance().getRootUrl() : jenkinsUrl,
                 computer.getJnlpMac(),
                 computer.getName()));
         return args;
-
-    }
-
-    private void launchStandardJNLPImage(SlaveComputer computer, TaskListener listener, DockerAPI api, String workdir, CreateContainerCmd cmd)  throws IOException, InterruptedException {
-        String vmargs = jnlpLauncher.vmargs;
-        if (StringUtils.isNotBlank(vmargs)) {
-            cmd.withEnv("JAVA_OPT=" + vmargs.trim());
-        }
-        List<String> jnlpArgs = buildJNLPArgs(computer);
-        cmd.withCmd(jnlpArgs);
-
-        if (StringUtils.isNotBlank(user)) {
-            cmd.withUser(user);
-        }
-
-        final PrintStream logger = computer.getListener().getLogger();
-        final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
-        api.getClient().waitContainerCmd(inspect.getId())
-                .exec(new WaitContainerResultCallback());
-
-    }
-
-    private void launchAndInjectJar(SlaveComputer computer, TaskListener listener, DockerAPI api, String workdir, CreateContainerCmd cmd)  throws IOException, InterruptedException{
-        final DockerClient client = api.getClient();
-        final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
-        List<String> args = new ArrayList<>();
-        args.add("java");
-
-        String vmargs = jnlpLauncher.vmargs;
-        if (StringUtils.isNotBlank(vmargs)) {
-            args.addAll(Arrays.asList(vmargs.split(" ")));
-        }
-
-        args.addAll(Arrays.asList(
-                "-cp", workdir + "/" + remoting.getName(),
-                "hudson.remoting.jnlp.Main", "-headless"));
-        args.addAll(buildJNLPArgs(computer));
-
-        final String containerId = inspect.getId();
-        final ExecCreateCmd cmdAfterInject = client.execCreateCmd(containerId)
-                .withAttachStdout(true)
-                .withTty(true)
-                .withCmd(args.toArray(new String[args.size()]));
-
-        if (StringUtils.isNotBlank(user)) {
-            cmdAfterInject.withUser(user);
-        }
-
-        final ExecCreateCmdResponse exec = cmdAfterInject.exec();
-
-        final PrintStream logger = computer.getListener().getLogger();
-        final ExecStartResultCallback start = client.execStartCmd(exec.getId())
-                .withDetach(true)
-                .withTty(true)
-                .exec(new ExecStartResultCallback(logger, logger));
-
-        start.awaitCompletion();
     }
 
     @Extension @Symbol("jnlp")
