@@ -210,8 +210,8 @@ public class DockerComputerSSHConnector extends DockerComputerConnector {
     }
 
     @Override
-    protected ComputerLauncher createLauncher(DockerAPI api, String workdir, CreateContainerCmd cmd, TaskListener listener) throws IOException, InterruptedException {
-        final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
+    protected ComputerLauncher createLauncher(DockerAPI api, String workdir, DockerTemplate.ContainerCommandCreator containerCommandCreator, TaskListener listener) throws IOException, InterruptedException {
+        final InspectContainerResponse inspect = executeContainer(api, listener, containerCommandCreator.createContainerCmd(api), workdir);
         if ("exited".equals(inspect.getState().getStatus())) {
             // Something went wrong
             // FIXME report error "somewhere" visible to end user.

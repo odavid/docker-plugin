@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 
 
@@ -399,24 +400,40 @@ public class DockerTemplate implements Describable<DockerTemplate> {
 
     }
 
+    public class ContainerCommandCreator implements Serializable{
+        private final String containerUniqueName;
+
+        ContainerCommandCreator(){
+            // Since container can now be launched during slave launch, we need an alternative unique node name, which will be also the container name
+            this.containerUniqueName = Long.toHexString(System.nanoTime());
+        }
+
+        public String getContainerUniqueName() {
+            return containerUniqueName;
+        }
+
+        public CreateContainerCmd createContainerCmd(DockerAPI api){
+            final DockerClient client = api.getClient();
+            CreateContainerCmd cmd = client.createContainerCmd(getImage());
+            fillContainerConfig(cmd);
+            cmd.withName(containerUniqueName);
+            return cmd;
+        }
+
+    }
+
     @Restricted(NoExternalUse.class)
     public DockerTransientNode provisionNode(DockerAPI api, TaskListener listener) throws IOException, Descriptor.FormException, InterruptedException {
 
-        final DockerClient client = api.getClient();
         final DockerComputerConnector connector = getConnector();
         pullImage(api, listener);
 
         LOGGER.info("Trying to run container for {}", getImage());
-        CreateContainerCmd cmd = client.createContainerCmd(getImage());
-        fillContainerConfig(cmd);
-        // Since container can now be launched during slave launch, we need an alternative unique node name, which will be also the container name
-        String containerUniqueName = Long.toHexString(System.nanoTime());
-        cmd.withName(containerUniqueName);
+        ContainerCommandCreator containerCommandCreator = new ContainerCommandCreator();
+        LOGGER.info("Trying to run container for image: {}, with unique name: {}", getImage(), containerCommandCreator.getContainerUniqueName());
+        final ComputerLauncher launcher = connector.createLauncher(api, containerCommandCreator, remoteFs, listener);
 
-        LOGGER.info("Trying to run container for image: {}, with unique name: {}", getImage(), containerUniqueName);
-        final ComputerLauncher launcher = connector.createLauncher(api, cmd, remoteFs, listener);
-
-        DockerTransientNode node = new DockerTransientNode(containerUniqueName, remoteFs, launcher);
+        DockerTransientNode node = new DockerTransientNode(containerCommandCreator.getContainerUniqueName(), remoteFs, launcher);
         node.setNodeDescription("Docker Agent [" + getImage() + " on "+ api.getDockerHost().getUri() + "]");
         node.setMode(mode);
         node.setLabelString(labelString);

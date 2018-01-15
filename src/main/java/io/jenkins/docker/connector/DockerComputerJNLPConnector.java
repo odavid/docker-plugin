@@ -1,11 +1,7 @@
 package io.jenkins.docker.connector;
 
-import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
-import com.github.dockerjava.api.command.ExecCreateCmd;
-import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
-import com.github.dockerjava.core.command.ExecStartResultCallback;
 import com.github.dockerjava.core.command.WaitContainerResultCallback;
 import com.nirima.jenkins.plugins.docker.DockerTemplate;
 import hudson.Extension;
@@ -17,14 +13,12 @@ import hudson.slaves.JNLPLauncher;
 import hudson.slaves.SlaveComputer;
 import io.jenkins.docker.client.DockerAPI;
 import jenkins.model.Jenkins;
-import jenkins.model.JenkinsLocationConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +31,6 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
     private String user;
     private final JNLPLauncher jnlpLauncher;
     private String jenkinsUrl;
-    private boolean passSlaveConnectionArgs;
 
     @DataBoundConstructor
     public DockerComputerJNLPConnector(JNLPLauncher jnlpLauncher) {
@@ -59,20 +52,8 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
     @DataBoundSetter
     public void setJenkinsUrl(String jenkinsUrl){ this.jenkinsUrl = jenkinsUrl; }
 
-    @DataBoundSetter
-    public void setPassSlaveConnectionArgs(boolean passSlaveConnectionArgs){
-        this.passSlaveConnectionArgs = passSlaveConnectionArgs;
-    }
-
-    public boolean isPassSlaveConnectionArgs() { return passSlaveConnectionArgs; }
-
     public DockerComputerJNLPConnector withUser(String user) {
         this.user = user;
-        return this;
-    }
-
-    public DockerComputerJNLPConnector withPassSlaveConnectionArgs(boolean passSlaveConnectionArgs){
-        setPassSlaveConnectionArgs(passSlaveConnectionArgs);
         return this;
     }
 
@@ -87,7 +68,7 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
 
     @Override
-    protected ComputerLauncher createLauncher(final DockerAPI api, final String workdir, final CreateContainerCmd cmd, TaskListener listener) throws IOException, InterruptedException {
+    protected ComputerLauncher createLauncher(final DockerAPI api, final String workdir, final DockerTemplate.ContainerCommandCreator containerCommandCreator, TaskListener listener) throws IOException, InterruptedException {
         return new DelegatingComputerLauncher(new JNLPLauncher()) {
 
             @Override
@@ -97,48 +78,21 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
             @Override
             public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
-                final DockerClient client = api.getClient();
-
-                List<String> args = buildCommand(workdir, computer);
-                if(!passSlaveConnectionArgs){
-                    final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
-                    final String containerId = inspect.getId();
-                    final ExecCreateCmd cmd = client.execCreateCmd(containerId)
-                            .withAttachStdout(true)
-                            .withTty(true)
-                            .withCmd(args.toArray(new String[args.size()]));
-
-                    if (StringUtils.isNotBlank(user)) {
-                        cmd.withUser(user);
-                    }
-
-                    final ExecCreateCmdResponse exec = cmd.exec();
-
-                    final PrintStream logger = computer.getListener().getLogger();
-                    final ExecStartResultCallback start = client.execStartCmd(exec.getId())
-                            .withDetach(true)
-                            .withTty(true)
-                            .exec(new ExecStartResultCallback(logger, logger));
-
-                    start.awaitCompletion();
-
-                } else{
-                    cmd.withCmd(args.toArray(new String[args.size()]));
-                    String vmargs = jnlpLauncher.vmargs;
-                    if (StringUtils.isNotBlank(vmargs)) {
-                        cmd.withEnv("JAVA_OPT=" + vmargs.trim());
-                    }
-                    if (StringUtils.isNotBlank(user)) {
-                        cmd.withUser(user);
-                    }
-
-                    final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
-                    final String containerId = inspect.getId();
-                    api.getClient().waitContainerCmd(containerId)
-                            .exec(new WaitContainerResultCallback());
-
+                final CreateContainerCmd cmd = containerCommandCreator.createContainerCmd(api);
+                List<String> args = buildCommand(computer);
+                cmd.withCmd(args.toArray(new String[args.size()]));
+                String vmargs = jnlpLauncher.vmargs;
+                if (StringUtils.isNotBlank(vmargs)) {
+                    cmd.withEnv("JAVA_OPT=" + vmargs.trim());
+                }
+                if (StringUtils.isNotBlank(user)) {
+                    cmd.withUser(user);
                 }
 
+                final InspectContainerResponse inspect = executeContainer(api, listener, cmd, workdir);
+                final String containerId = inspect.getId();
+                api.getClient().waitContainerCmd(containerId)
+                        .exec(new WaitContainerResultCallback());
             }
         };
 
@@ -146,43 +100,20 @@ public class DockerComputerJNLPConnector extends DockerComputerConnector {
 
     @Override
     public void beforeContainerCreated(DockerAPI api, String workdir, CreateContainerCmd cmd) throws IOException, InterruptedException {
-        if(!passSlaveConnectionArgs) {
-            ensureWaiting(cmd);
-        }
     }
 
     @Override
     public void afterContainerStarted(DockerAPI api, String workdir, String containerId) throws IOException, InterruptedException {
-        if(!passSlaveConnectionArgs) {
-            final DockerClient client = api.getClient();
-            injectRemotingJar(containerId, workdir, client);
-        }
     }
 
-    private List<String> buildCommand(String workdir, SlaveComputer computer) {
+    private List<String> buildCommand(SlaveComputer computer) {
         List<String> args = new ArrayList<>();
-        // if we are running direct entrypoint, without injecting the slave jar, we do not know the location of the slave jar
-        // so, we only pass the command line arguments of the slave.jar to the entrypoint.
-        // See https://github.com/jenkinsci/docker-jnlp-slave
-        if(!passSlaveConnectionArgs) {
-            args.add("java");
-
-            String vmargs = jnlpLauncher.vmargs;
-            if (StringUtils.isNotBlank(vmargs)) {
-                args.addAll(Arrays.asList(vmargs.split(" ")));
-            }
-
-            args.addAll(Arrays.asList(
-                    "-cp", workdir + "/" + remoting.getName(),
-                    "hudson.remoting.jnlp.Main", "-headless"));
-        }
-
         if (StringUtils.isNotBlank(jnlpLauncher.tunnel)) {
             args.addAll(Arrays.asList("-tunnel", jnlpLauncher.tunnel));
         }
 
         args.addAll(Arrays.asList(
-                "-url", jenkinsUrl == null ? Jenkins.getInstance().getRootUrl() : jenkinsUrl,
+                "-url", StringUtils.isEmpty(jenkinsUrl) ? Jenkins.getInstance().getRootUrl() : jenkinsUrl,
                 computer.getJnlpMac(),
                 computer.getName()));
         return args;

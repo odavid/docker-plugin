@@ -40,33 +40,4 @@ public class DockerComputerJNLPConnectorTest extends DockerComputerConnectorTest
 
         should_connect_agent(template);
     }
-
-    @Test
-    public void should_connect_agent_using_standard_jnlp_image() throws InterruptedException, ExecutionException, IOException, URISyntaxException {
-
-        final JenkinsLocationConfiguration location = JenkinsLocationConfiguration.get();
-        URI uri = URI.create(location.getUrl());
-        if (SystemUtils.IS_OS_MAC) {
-            uri = new URI(uri.getScheme(), uri.getUserInfo(), "docker.for.mac.localhost",
-                    uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
-        } else if (SystemUtils.IS_OS_WINDOWS) {
-            uri = new URI(uri.getScheme(), uri.getUserInfo(), "docker.for.windows.localhost",
-                    uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
-        }
-
-        final DockerTemplate template = new DockerTemplate(
-                new DockerTemplateBase("jenkins/jnlp-slave"),
-                new DockerComputerJNLPConnector(new JNLPLauncher(null, null)).withUser("jenkins")
-                        .withJenkinsUrl(uri.toString())
-                        .withPassSlaveConnectionArgs(true),
-                "docker-agent", "/home/jenkins/agent", "10"
-        );
-
-        if (SystemUtils.IS_OS_LINUX) {
-            template.getDockerTemplateBase().setNetwork("host");
-        }
-
-        should_connect_agent(template);
-    }
-
 }

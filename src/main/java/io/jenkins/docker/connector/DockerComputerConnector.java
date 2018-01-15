@@ -118,9 +118,9 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
         return inspect;
     }
 
-    public final ComputerLauncher createLauncher(final DockerAPI api, CreateContainerCmd cmd, String workdir, TaskListener listener) throws IOException, InterruptedException {
+    public final ComputerLauncher createLauncher(final DockerAPI api, DockerTemplate.ContainerCommandCreator containerCommandCreator, String workdir, TaskListener listener) throws IOException, InterruptedException {
 
-        final ComputerLauncher launcher = createLauncher(api, workdir, cmd, listener);
+        final ComputerLauncher launcher = createLauncher(api, workdir, containerCommandCreator, listener);
         return new DelegatingComputerLauncher(launcher) {
 
             @Override
@@ -145,7 +145,7 @@ public abstract class DockerComputerConnector extends AbstractDescribableImpl<Do
      * Create a Launcher to create an Agent with this container. Can assume container has been created by this
      * DockerAgentConnector so adequate setup did take place.
      */
-    protected abstract ComputerLauncher createLauncher(DockerAPI api, String workdir, CreateContainerCmd cmd, TaskListener listener) throws IOException, InterruptedException;
+    protected abstract ComputerLauncher createLauncher(DockerAPI api, String workdir, DockerTemplate.ContainerCommandCreator containerCommandCreator, TaskListener listener) throws IOException, InterruptedException;
 
 
 }
